@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <title>Meine Favoriten · mpool Förderprogramm-Finder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <!-- Link to the same CSS styles as index.html for consistency -->
+  <link rel="stylesheet" href="index.html#css-definitions"> 
+  <style>
+    /* Minimal page-specific styles if needed, most come from index.html linkage */
+    body {
+      background: linear-gradient(135deg, var(--primary-color-lighter, #e0f2fe) 0%, #dbeafe 100%);
+      font-family: 'Inter', sans-serif;
+      color: var(--text-primary, #1f2937);
+    }
+    .no-favorites {
+      text-align: center;
+      padding: 3rem 1rem;
+      font-size: 1.25rem;
+      color: var(--text-muted, #6b7280);
+    }
+    .main-content-area {
+        padding-top: 2rem;
+    }
+     /* Ensure CSS variables are available if index.html#css-definitions doesn't load them as expected */
+    :root {
+      --primary-color: #0ea5e9;
+      --primary-color-dark: #0284c7;
+      --primary-color-darker: #0369a1;
+      --primary-color-light: #7dd3fc;
+      --primary-color-lighter: #e0f2fe;
+      --text-primary: #1f2937;
+      --text-secondary: #4b5563;
+      --text-muted: #6b7280;
+      --bg-light: #f9fafb;
+      --bg-lighter: #f3f4f6;
+      --border-color: #e5e7eb;
+      --border-color-light: #f3f4f6;
+      --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      --card-hover-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -4px rgba(0, 0, 0, 0.07);
+    }
+    /* Styles for programme cards and heart icons copied from index.html for standalone viewing */
+    .programme-card {
+      background-color: #fff;
+      border: 1px solid var(--border-color);
+      border-radius: 0.875rem;
+      margin-bottom: 1.25rem;
+      padding: 2rem 1.5rem;
+      box-shadow: var(--card-shadow);
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      position: relative;
+    }
+    .programme-card:hover {
+      box-shadow: var(--card-hover-shadow);
+      border-color: var(--primary-color);
+      transform: translateY(-5px) scale(1.02);
+    }
+    .programme-card h2 {
+      color: var(--primary-color-darker);
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      padding-right: 2.5rem; /* Space for heart */
+    }
+     .programme-card p.text-sm { color: var(--text-secondary); line-height: 1.6; }
+     .programme-card ul { color: var(--text-muted); list-style-position: inside; margin-top: 0.75rem; }
+     .programme-card ul li { margin-bottom: 0.25rem; }
+     .programme-card ul li strong { color: var(--text-primary); font-weight: 600; }
+     .programme-card a { color: var(--primary-color-dark); font-weight: 600; transition: color 0.2s, letter-spacing 0.25s ease-out, transform 0.2s ease-out; display: inline-block; margin-top: 0.75rem; }
+     .programme-card a:hover { color: var(--primary-color-darker); letter-spacing: 0.75px; transform: translateX(2px); text-decoration: underline;}
+     .programme-card .text-xs.bg-indigo-100 { background-color: var(--primary-color-lighter); color: var(--primary-color-darker); font-weight: 600; padding: 0.375rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; }
+
+    .heart-icon {
+        position: absolute;
+        top: 1rem; /* Adjusted for padding */
+        right: 1rem; /* Adjusted for padding */
+        padding: 0.5rem; /* Tailwind p-2 */
+        border-radius: 9999px; /* rounded-full */
+    }
+    .heart-icon svg {
+        transition: color 0.2s ease-in-out, fill 0.2s ease-in-out, transform 0.2s ease-in-out;
+        width: 1.5rem; /* Tailwind w-6, h-6 */
+        height: 1.5rem;
+    }
+    .heart-icon:hover svg { transform: scale(1.15); }
+    .heart-icon.favorited svg { fill: var(--primary-color); stroke: var(--primary-color); color: var(--primary-color); }
+    .heart-icon:not(.favorited) svg { fill: none; stroke: var(--text-muted); color: var(--text-muted); }
+    .heart-icon:not(.favorited):hover svg { stroke: var(--primary-color-dark); color: var(--primary-color-dark); }
+    .header-nav-link {
+        color: rgba(255,255,255,0.85);
+        font-weight: 500;
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.375rem;
+        transition: background-color 0.2s ease, color 0.2s ease;
+        text-decoration: none;
+    }
+    .header-nav-link:hover {
+        background-color: rgba(255,255,255,0.1);
+        color: #fff;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <header class="text-white p-4 flex items-center justify-between gap-4" style="background: linear-gradient(120deg, var(--primary-color-darker) 0%, var(--primary-color-dark) 70%, var(--primary-color) 100%); box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.15), 0 3px 7px -3px rgba(0,0,0,0.1); padding: 1.25rem 2rem;">
+    <div class="flex items-center gap-4">
+      <img src="https://www.mpool-consulting-do.de/wp-content/uploads/2020/05/cropped-cropped-mpool_consulting.png" alt="Mpool Consulting Logo" class="h-10 w-auto" style="border-radius: 0.625rem; padding: 0.375rem; background-color: rgba(255,255,255,0.95); box-shadow: 0 3px 7px rgba(0,0,0,0.1);">
+      <h1 class="text-2xl" style="font-weight: 700; font-size: 1.625rem; text-shadow: 0 1px 3px rgba(0,0,0,0.2); letter-spacing: -0.5px;">Meine Favoriten</h1>
+    </div>
+    <nav>
+      <a href="index.html" class="header-nav-link">Zurück zur Suche</a>
+    </nav>
+  </header>
+
+  <main class="p-4 max-w-5xl mx-auto w-full flex-grow flex flex-col main-content-area">
+    <div id="favoritesResults" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Favorisierte Programme werden hier per JS geladen -->
+    </div>
+  </main>
+
+  <footer class="p-4 text-center text-sm" style="background-color: transparent; color: var(--primary-color-darker); padding: 2rem; font-weight: 500; border-top: 1px solid var(--primary-color-lighter);">
+    © 2025 Mpool Consulting · Alle Rechte vorbehalten
+  </footer>
+
+  <script type="module" src="favorites.js"></script>
+</body>
+</html> 

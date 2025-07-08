@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <title>mpool Consulting · Förderprogramm-Finder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    :root {
+      --primary-color: #0ea5e9; /* Sky-500 */
+      --primary-color-dark: #0284c7; /* Sky-600 */
+      --primary-color-darker: #0369a1; /* Sky-700 */
+      --primary-color-light: #7dd3fc; /* Sky-300 */
+      --primary-color-lighter: #e0f2fe; /* Sky-100 */
+      --text-primary: #1f2937; /* Gray-800 */
+      --text-secondary: #4b5563; /* Gray-600 */
+      --text-muted: #6b7280; /* Gray-500 */
+      --bg-light: #f9fafb; /* Gray-50 */
+      --bg-lighter: #f3f4f6; /* Gray-100 */
+      --border-color: #e5e7eb; /* Gray-200 */
+      --border-color-light: #f3f4f6; /* Gray-100 */
+      --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      --card-hover-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -4px rgba(0, 0, 0, 0.07);
+      --input-focus-shadow: 0 0 0 3px rgba(14, 165, 233, 0.25);
+      --glass-bg: rgba(255, 255, 255, 0.65); /* Semi-transparent white for glass effect */
+      --glass-border: rgba(255, 255, 255, 0.2);
+      --blur-intensity: 8px;
+    }
+
+    body {
+      background: linear-gradient(135deg, var(--primary-color-lighter) 0%, #dbeafe 100%); /* Sky-100 to Blue-100 */
+      font-family: 'Inter', sans-serif;
+      color: var(--text-primary);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      transition: background-color 0.3s ease;
+    }
+    header {
+      /* background: var(--primary-color-darker); */
+      background: linear-gradient(120deg, var(--primary-color-darker) 0%, var(--primary-color-dark) 70%, var(--primary-color) 100%);
+      color: #f0f9ff; /* Lighter text color for better contrast on darker gradient */
+      box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.15), 0 3px 7px -3px rgba(0,0,0,0.1);
+      padding: 1.25rem 2rem; /* Slightly more padding */
+      position: relative; /* For potential pseudo-elements or advanced styling */
+      overflow: hidden; /* To contain any decorative pseudo-elements */
+      z-index: 1;
+    }
+    header > * { /* Ensure direct children are above pseudo-elements */
+        position: relative;
+        z-index: 1;
+    }
+
+    header img {
+      border-radius: 0.625rem; /* 10px */
+      padding: 0.375rem; /* 6px */
+      background-color: rgba(255,255,255,0.95); /* Slightly less opaque white */
+      box-shadow: 0 3px 7px rgba(0,0,0,0.1);
+      transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+    header img:hover {
+        transform: scale(1.1) rotate(-4deg) translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    }
+    header h1 {
+        font-weight: 700; /* Bold */
+        font-size: 1.625rem; /* Slightly larger: 26px */
+        text-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        letter-spacing: -0.5px; /* Slightly tighter letter spacing */
+    }
+    header nav a {
+        color: rgba(255,255,255,0.85);
+        font-weight: 500;
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.375rem; /* 6px */
+        transition: background-color 0.2s ease, color 0.2s ease;
+        text-decoration: none;
+    }
+    header nav a:hover {
+        background-color: rgba(255,255,255,0.1);
+        color: #fff;
+    }
+
+    #chat {
+      background: #ffffff;
+      border-radius: 0.875rem; /* 14px */
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); /* Elevated shadow */
+      padding: 1.75rem; /* More padding */
+      margin-bottom: 1.5rem;
+      min-height: 600px; /* Increased min-height */
+      max-height: 78vh; /* Increased max-height */
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem; /* Increased gap */
+      scrollbar-width: thin;
+      scrollbar-color: var(--primary-color-light) var(--bg-lighter);
+    }
+    #chat::-webkit-scrollbar {
+        width: 10px;
+    }
+    #chat::-webkit-scrollbar-track {
+        background: var(--bg-lighter);
+        border-radius: 10px;
+    }
+    #chat::-webkit-scrollbar-thumb {
+        background-color: var(--primary-color-light);
+        border-radius: 10px;
+        border: 3px solid var(--bg-lighter);
+        transition: background-color 0.2s ease;
+    }
+    #chat::-webkit-scrollbar-thumb:hover {
+        background-color: var(--primary-color);
+    }
+
+    .self-end { align-self: flex-end; }
+    .self-start { align-self: flex-start; }
+
+    .chat-bubble-user {
+      background: linear-gradient(100deg, var(--primary-color) 0%, var(--primary-color-dark) 100%);
+      color: #fff;
+      border-radius: 1.375em 1.375em 0.5em 1.375em; /* More pronounced shape */
+      padding: 1.5rem 1.5rem; /* Further Increased top/bottom padding */
+      box-shadow: 0 5px 10px rgba(14, 165, 233, 0.2), 0 2px 4px rgba(14, 165, 233, 0.15);
+      max-width: 78%;
+      word-wrap: break-word;
+      transition: transform 0.2s ease-out;
+    }
+    .chat-bubble-user:hover {
+        transform: scale(1.015);
+    }
+
+    .chat-bubble-ai {
+      background: var(--bg-lighter);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 1.375em 1.375em 1.375em 0.5em;
+      padding: 1.5rem 1.5rem; /* Further Increased top/bottom padding */
+      box-shadow: var(--card-shadow);
+      max-width: 78%;
+      word-wrap: break-word;
+      transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+    }
+    .chat-bubble-ai:hover {
+        transform: scale(1.015);
+        box-shadow: var(--card-hover-shadow);
+    }
+    .chat-bubble-ai a {
+      color: var(--primary-color-dark);
+      text-decoration: none;
+      font-weight: 600; /* Semibold for links */
+      border-bottom: 1px solid transparent;
+      transition: color 0.2s, border-color 0.2s;
+    }
+     .chat-bubble-ai a:hover {
+      color: var(--primary-color-darker);
+      border-bottom: 1px solid var(--primary-color-light);
+    }
+    .chat-bubble-ai .italic.text-gray-700 { /* AI's "begruendung" */
+        font-style: normal;
+        color: var(--text-secondary);
+        background-color: var(--primary-color-lighter);
+        padding: 0.875rem 1.25rem;
+        border-radius: 0.625rem; /* 10px */
+        display: block;
+        margin-top: 0.75rem;
+        border-left: 4px solid var(--primary-color);
+        box-shadow: inset 2px 0px 5px rgba(14, 165, 233, 0.1);
+    }
+
+    .programme-card {
+      background-color: #fff;
+      border: 1px solid var(--border-color);
+      border-radius: 0.875rem; /* 14px */
+      margin-bottom: 1.25rem;
+      padding: 2rem 1.5rem; /* Further Increased top/bottom padding */
+      box-shadow: var(--card-shadow);
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      overflow: hidden; /* For potential inner animated elements if added */
+    }
+    .programme-card:hover {
+      box-shadow: var(--card-hover-shadow);
+      border-color: var(--primary-color);
+      transform: translateY(-5px) scale(1.02);
+    }
+    .programme-card:not([data-antragsfrist="laufend"]) {
+        background-color: rgba(255, 0, 0, 0.1); /* Light red background for light mode */
+    }
+    .dark .programme-card:not([data-antragsfrist="laufend"]) {
+        background-color: rgba(255, 0, 0, 0.2); /* Darker red background for dark mode */
+    }
+    .programme-card h2 {
+      color: var(--primary-color-darker);
+      font-weight: 700; /* Bold */
+      margin-bottom: 0.5rem;
+    }
+    .programme-card p.text-sm {
+        color: var(--text-secondary);
+        line-height: 1.6;
+    }
+    .programme-card ul {
+        color: var(--text-muted);
+        list-style-position: inside;
+        margin-top: 0.75rem;
+    }
+    .programme-card ul li {
+        margin-bottom: 0.25rem;
+    }
+    .programme-card ul li strong {
+        color: var(--text-primary);
+        font-weight: 600; /* Semibold */
+    }
+    .programme-card a {
+        color: var(--primary-color-dark);
+        font-weight: 600; /* Semibold */
+        transition: color 0.2s, letter-spacing 0.25s ease-out, transform 0.2s ease-out;
+        display: inline-block;
+        margin-top: 0.75rem;
+    }
+    .programme-card a:hover {
+        color: var(--primary-color-darker);
+        letter-spacing: 0.75px;
+        transform: translateX(2px);
+        text-decoration: underline;
+    }
+    .programme-card .text-xs.bg-indigo-100 { /* "Für Mpool" badge */
+        background-color: var(--primary-color-lighter);
+        color: var(--primary-color-darker);
+        font-weight: 600;
+        padding: 0.375rem 0.75rem;
+        border-radius: 9999px; /* pill shape */
+        font-size: 0.75rem; /* text-xs */
+    }
+
+    #chatForm {
+      /* background: linear-gradient(to top, #ffffff, var(--bg-light)); */ /* Replaced by glassmorphism */
+      background-color: var(--glass-bg);
+      backdrop-filter: blur(var(--blur-intensity));
+      -webkit-backdrop-filter: blur(var(--blur-intensity));
+      border-radius: 0.875rem; /* 14px */
+      box-shadow: 0 -5px 15px rgba(0,0,0,0.03), 0 0 10px rgba(0,0,0,0.03); /* Softer shadow for glass */
+      padding: 1.25rem 1.5rem;
+      position: sticky;
+      bottom: 1rem;
+      margin: 0 1rem 1rem 1rem;
+      max-width: calc(100% - 2rem);
+      left: 1rem;
+      right: 1rem;
+      z-index: 20; /* Higher z-index */
+      display: flex;
+      gap: 0.875rem;
+      /* border-top: 1px solid var(--border-color); */ /* Replaced by glass border */
+      border: 1px solid var(--glass-border);
+      align-items: center; /* Align items vertically */
+    }
+    #chatForm input#query {
+      border: 1px solid var(--glass-border); /* Subtle border for glass */
+      background-color: rgba(255,255,255,0.5); /* Slightly transparent input */
+      color: var(--text-primary);
+      border-radius: 0.625rem; /* 10px */
+      padding: 0.875rem 1.125rem;
+      transition: border-color 0.25s, box-shadow 0.25s;
+      flex-grow: 1;
+      font-size: 1rem;
+    }
+    #chatForm input#query:focus {
+      border-color: var(--primary-color);
+      box-shadow: var(--input-focus-shadow);
+      outline: none;
+    }
+    #chatForm button {
+      border-radius: 0.625rem; /* 10px */
+      padding: 0.875rem 1.375rem;
+      font-weight: 600; /* Semibold */
+      transition: all 0.2s ease-out;
+      border: none;
+      cursor: pointer;
+    }
+    #chatForm button#sendBtn {
+      background-color: var(--primary-color);
+      color: white;
+      box-shadow: 0 2px 5px rgba(14, 165, 233, 0.2);
+      background-size: 200% 100%; /* For gradient animation */
+      transition: background-color 0.2s ease-out, transform 0.2s ease-out, box-shadow 0.2s ease-out, background-position 0.4s ease-out;
+    }
+    #chatForm button#sendBtn:hover {
+      background-color: var(--primary-color-dark);
+      background-image: linear-gradient(to right, var(--primary-color-dark) 0%, var(--primary-color) 50%, var(--primary-color-dark) 100%);
+      background-position: -100% 0; /* Animate gradient */
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 4px 8px rgba(14, 165, 233, 0.25);
+    }
+    #chatForm button#sendBtn:active {
+        transform: translateY(-1px) scale(0.98);
+        background-color: var(--primary-color-darker);
+    }
+     #chatForm button#micBtn {
+      background-color: var(--bg-lighter);
+      color: var(--text-muted);
+      padding: 0.875rem;
+      box-shadow: var(--card-shadow);
+    }
+    #chatForm button#micBtn:hover {
+      background-color: var(--border-color);
+      color: var(--text-primary);
+      transform: translateY(-2px) scale(1.05);
+      box-shadow: 0 3px 6px rgba(0,0,0,0.08);
+    }
+    #chatForm button#micBtn svg {
+      transition: transform 0.2s ease-in-out, color 0.2s ease-in-out;
+      width: 1.5em; /* Increased size */
+      height: 1.5em; /* Increased size */
+    }
+    #chatForm button#micBtn:hover svg {
+      transform: scale(1.15); /* Slightly more scale on hover */
+    }
+    #chatForm button#micBtn.bg-red-600 {
+        background-color: #ef4444; /* Red-500 */
+        color: white;
+        box-shadow: 0 2px 5px rgba(239, 68, 68, 0.3);
+    }
+    #chatForm button#micBtn.bg-red-600:hover {
+        background-color: #dc2626; /* Red-600 */
+        transform: translateY(-2px) scale(1.05);
+        box-shadow: 0 4px 8px rgba(220, 38, 38, 0.35);
+    }
+    #chatForm label[for="docFile"] {
+        color: var(--primary-color-dark);
+        font-weight: 600; /* Semibold */
+        transition: all 0.2s ease-out;
+        padding: 0.875rem 0.625rem;
+        cursor: pointer;
+        border-radius: 0.625rem; /* 10px */
+        display: flex; align-items: center;
+    }
+    #chatForm label[for="docFile"]:hover {
+        color: var(--primary-color-darker);
+        background-color: var(--primary-color-lighter);
+        transform: translateY(-2px) scale(1.02);
+        box-shadow: 0 2px 4px rgba(14, 165, 233, 0.1);
+    }
+    #chatForm label[for="docFile"]:active {
+        transform: translateY(-1px) scale(0.98);
+        background-color: #bae6fd; /* Sky-200 */
+    }
+
+    /* Filter section styling */
+    .filter-section {
+        background-color: var(--glass-bg);
+        backdrop-filter: blur(var(--blur-intensity));
+        -webkit-backdrop-filter: blur(var(--blur-intensity));
+        padding: 2rem;
+        border-radius: 0.875rem; /* 14px */
+        box-shadow: 0 8px 20px rgba(0,0,0,0.07), 0 0 15px rgba(0,0,0,0.04);/* Softer shadow for glass */
+        margin-bottom: 2.5rem;
+        border: 1px solid var(--glass-border);
+    }
+    .filter-section h2 {
+        color: var(--primary-color-darker);
+        margin-bottom: 1.5rem;
+        font-weight: 700; /* Bold */
+        font-size: 1.375rem; /* Larger */
+        border-bottom: 2px solid var(--primary-color-lighter);
+        padding-bottom: 0.75rem;
+    }
+    .filter-section label.block {
+        color: var(--text-secondary);
+        font-weight: 600; /* Semibold */
+        margin-bottom: 0.5rem;
+        font-size: 0.9375rem; /* 15px */
+    }
+    .filter-section select {
+        border: 1px solid var(--border-color);
+        border-radius: 0.625rem; /* 10px */
+        padding: 0.75rem 1rem;
+        transition: border-color 0.25s, box-shadow 0.25s;
+        background-color: rgba(255,255,255,0.8); /* Slightly transparent select */
+        width: 100%;
+        font-size: 0.9375rem;
+        color: var(--text-primary);
+    }
+    .filter-section select:focus {
+      border-color: var(--primary-color);
+      box-shadow: var(--input-focus-shadow);
+      outline: none;
+    }
+    .filter-section .flex-col.md\:flex-row {
+        gap: 1.5rem; /* Increased gap between filter groups */
+    }
+
+    /* --- Smooth transition for filter collapse --- */
+    #filterContent {
+        /* Allow dropdown panels inside filter section to extend beyond their container when expanded */
+        overflow: visible;
+        transition: height 0.45s cubic-bezier(0.4, 0.2, 0.2, 1), opacity 0.35s cubic-bezier(0.4, 0.2, 0.2, 1);
+        height: auto;
+        opacity: 1;
+        will-change: height, opacity;
+    }
+    /* While the filter section is animating we still hide overflow to avoid visual glitches */
+    .filter-section.collapsing #filterContent {
+        overflow: hidden;
+        pointer-events: none;
+    }
+    .filter-section.collapsed #filterContent {
+        height: 0 !important;
+        opacity: 0;
+        pointer-events: none;
+    }
+    .filter-section.collapsed { padding-bottom:0.5rem; }
+    .filter-section.collapsed #filterToggleIcon { transform: rotate(-90deg); }
+
+    footer {
+      background-color: transparent; /* Transparent background for gradient body */
+      color: var(--primary-color-darker);
+      padding: 2rem;
+      text-align: center;
+      font-size: 0.9375rem;
+      font-weight: 500;
+      border-top: 1px solid var(--primary-color-lighter);
+    }
+
+    /* Loading spinner and message styling */
+    .animate-spin {
+        color: var(--primary-color);
+        width: 1.75em; /* Larger spinner */
+        height: 1.75em;
+    }
+    .flex.items-center.gap-2.text-blue-700 { /* AI loading/thinking message */
+        color: var(--primary-color-darker);
+        font-weight: 600; /* Semibold */
+        font-size: 1rem;
+        padding: 0.5rem 0;
+    }
+    span > .animate-spin + svg {
+        /* If there's a path inside the spinner span, style it for better visibility */
+    }
+
+    @media (max-width: 768px) { /* md breakpoint */
+      header { padding: 1rem; text-align: center; flex-direction: column;}
+      header img { margin-bottom: 0.5rem; }
+      header h1 { font-size: 1.375rem; }
+      .filter-section .flex-col.md\:flex-row {
+          flex-direction: column !important;
+          gap: 1rem;
+      }
+      .filter-section {
+          padding: 1.5rem;
+          margin-bottom: 2rem;
+      }
+      #chatForm {
+          flex-wrap: wrap; /* Allow wrapping for smaller screens */
+          padding: 1rem;
+          gap: 0.75rem;
+      }
+      #chatForm input#query {
+          font-size: 0.9375rem;
+          padding: 0.75rem 1rem;
+      }
+      #chatForm button {
+          padding: 0.75rem 1.125rem;
+      }
+      #chatForm button#micBtn, #chatForm label[for="docFile"] {
+          padding: 0.75rem;
+      }
+    }
+
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9375rem;
+      }
+      #chat {
+        padding: 1.25rem 0.875rem;
+        min-height: 300px;
+        max-height: 75vh;
+        gap: 1rem;
+        border-radius: 0.75rem;
+      }
+      #chatForm {
+        padding: 0.875rem;
+        margin: 0 0.5rem 0.5rem 0.5rem;
+        max-width: calc(100% - 1rem);
+        left: 0.5rem;
+        right: 0.5rem;
+        bottom: 0.5rem;
+        border-radius: 0.75rem;
+      }
+      #chatForm input#query {
+          padding: 0.6875rem 0.875rem;
+          font-size: 0.875rem;
+      }
+      #chatForm button {
+          padding: 0.6875rem 1rem;
+          font-size: 0.875rem;
+      }
+      #chatForm button#micBtn, #chatForm label[for="docFile"] {
+          padding: 0.6875rem;
+      }
+      .chat-bubble-user, .chat-bubble-ai {
+        max-width: 90%;
+        padding: 0.875rem 1.25rem;
+        font-size: 0.875rem;
+        border-radius: 1.25em 1.25em (0.875em / 2) 1.25em; /* Adjust rounding based on new padding */
+      }
+      .chat-bubble-ai {
+         border-radius: 1.25em 1.25em 1.25em (0.875em / 2);
+      }
+      .programme-card {
+          padding: 1.25rem;
+          margin-bottom: 1rem;
+          border-radius: 0.75rem;
+      }
+      .programme-card h2 {
+          font-size: 1.1875rem;
+      }
+      .filter-section {
+        padding: 1.25rem;
+        margin-bottom: 1.5rem;
+        border-radius: 0.75rem;
+      }
+      .filter-section h2 {
+          font-size: 1.25rem;
+          margin-bottom: 1.25rem;
+          padding-bottom: 0.625rem;
+      }
+      .filter-section label.block, .filter-section select {
+          font-size: 0.875rem;
+      }
+      .filter-section select {
+          padding: 0.625rem 0.875rem;
+      }
+      footer {
+          padding: 1.5rem;
+          font-size: 0.875rem;
+      }
+    }
+
+    .system-message {
+      background-color: var(--primary-color-lighter);
+      color: var(--primary-color-darker);
+      padding: 0.75rem 1.25rem;
+      border-radius: 0.5rem; /* 8px */
+      font-size: 0.875rem; /* 14px */
+      font-weight: 500;
+      text-align: center;
+      border: 1px solid var(--primary-color-light);
+      box-shadow: inset 0 0 5px rgba(14, 165, 233, 0.05);
+      max-width: 60%;
+      margin-top: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Heart icon styling */
+    .heart-icon svg { /* For transform */
+        transition: transform 0.2s ease-in-out;
+    }
+    .heart-icon svg path { /* For fill and stroke transitions */
+        transition: fill 0.2s ease-in-out, stroke 0.2s ease-in-out;
+        /* stroke-width: 1.5px; /* Optional: Can be set here if SVG attribute isn't enough, but usually is. */
+    }
+
+    .heart-icon:hover svg {
+        transform: scale(1.15);
+    }
+
+    /* Favorited state */
+    .heart-icon.favorited svg path {
+        fill: var(--primary-color) !important;
+        stroke: var(--primary-color) !important;
+    }
+    .heart-icon.favorited svg { 
+        color: var(--primary-color); 
+    }
+
+    /* Non-favorited state (default) */
+    .heart-icon:not(.favorited) svg path {
+        fill: none;
+        stroke: var(--text-muted);
+    }
+    .heart-icon:not(.favorited) svg {
+        color: var(--text-muted); 
+    }
+
+    /* Non-favorited hover state */
+    .heart-icon:not(.favorited):hover svg path {
+        stroke: var(--primary-color-dark);
+    }
+    /* Optional: if you want the parent SVG's color to also change on hover for :not(.favorited) state */
+    /* .heart-icon:not(.favorited):hover svg {
+        color: var(--primary-color-dark);
+    } */
+
+    /* === Dark Mode Overrides === */
+    .dark {
+      --primary-color: #38bdf8;
+      --primary-color-dark: #0ea5e9;
+      --primary-color-darker: #0284c7;
+      --primary-color-light: #7dd3fc;
+      --primary-color-lighter: #082f49;
+      --text-primary: #f3f4f6;
+      --text-secondary: #d1d5db;
+      --text-muted: #9ca3af;
+      --bg-light: #1f2937;
+      --bg-lighter: #111827;
+      --border-color: #374151;
+      --border-color-light: #4b5563;
+    }
+
+    body.dark {
+      background: linear-gradient(135deg, var(--bg-light) 0%, var(--bg-lighter) 100%);
+      color: var(--text-primary);
+    }
+    .dark .programme-card { background-color: var(--bg-light); border-color: var(--border-color); color: var(--text-primary);} 
+    .dark .filter-section { background-color: rgba(17,24,39,0.6); border-color: var(--border-color); }
+    .dark #chat { background-color: var(--bg-light); }
+    .dark .chat-bubble-ai { background-color: var(--bg-lighter); border-color: var(--border-color); color: var(--text-primary); }
+    .dark .chat-bubble-user { background: linear-gradient(100deg, var(--primary-color-dark) 0%, var(--primary-color) 100%); }
+    .dark select, .dark input { background-color: var(--bg-lighter); color: var(--text-primary); border-color: var(--border-color); }
+    .dark .heart-icon svg path { stroke: var(--text-muted); }
+    .dark .heart-icon:hover svg path { stroke: var(--primary-color-light); }
+    .dark .heart-icon.favorited svg path { fill: var(--primary-color); stroke: var(--primary-color); }
+    .dark select { background-color: var(--bg-light); color: var(--text-primary); border-color: var(--border-color); }
+    .dark #eligibleDropdownButton,
+    .dark #fundingTypeDropdownButton,
+    .dark #companySizeDropdownButton { background-color: var(--bg-light); color: var(--text-primary); border-color: var(--border-color); }
+    .dark #eligibleDropdownPanel,
+    .dark #fundingTypeDropdownPanel,
+    .dark #companySizeDropdownPanel { background-color: var(--bg-light); color: var(--text-primary); }
+    .dark #eligibleDropdownPanel label,
+    .dark #fundingTypeDropdownPanel label,
+    .dark #companySizeDropdownPanel label { color: var(--text-primary); }
+
+    .filter-section.collapsed #filterContent { display:none; }
+    .filter-section.collapsed { padding-bottom:0.5rem; }
+    .filter-section.collapsed #filterToggleIcon { transform: rotate(-90deg); }
+
+    /* Sidebar styles */
+    .sidebar {
+      background-color: var(--bg-lighter);
+      width: 240px;
+      overflow-y: auto;
+      border-right: 1px solid var(--border-color-light);
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar ul#chatList {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .chat-item {
+      display: block;
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      color: var(--text-primary);
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+    .chat-item:hover {
+      background-color: var(--border-color);
+    }
+    .chat-item.active {
+      background-color: var(--primary-color-dark);
+      color: #fff;
+    }
+    .dark .sidebar {
+      background-color: var(--bg-light);
+      border-color: var(--border-color);
+    }
+    .dark .chat-item:hover {
+      background-color: var(--border-color-light);
+    }
+
+    /* Sichtbarkeit für das Prompt-Eingabefeld */
+    #query {
+      background-color: #1e293b; /* slate-800 */
+      color: #f9fafb;            /* near white */
+    }
+    #query::placeholder { color:#cbd5e1; } /* slate-300 */
+    .dark #query {
+      background-color: #0f172a; /* slate-900 */
+      color: #f9fafb;
+    }
+    .dark #query::placeholder { color:#64748b; } /* slate-400 */
+    /* Override more specific rule in dark mode to ensure input is not light */
+    .dark #chatForm input#query {
+        background-color: #0f172a; /* slate-900 */
+        color: #f9fafb;
+        border-color: #334155; /* slate-700 */
+    }
+    .dark #chatForm input#query::placeholder {
+        color: #64748b; /* slate-400 */
+    }
+  </style>
+  <script type="module" src="script.js"></script>
+</head>
+<body class="min-h-screen flex">
+  <!-- Sidebar for chat histories -->
+  <aside id="chatSidebar" class="sidebar hidden md:block">
+    <div class="p-4">
+      <h2 class="text-lg font-semibold mb-4">Chats</h2>
+      <ul id="chatList" class="space-y-1"></ul>
+      <button id="newChatBtn" class="mt-4 w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-semibold">New chat</button>
+    </div>
+  </aside>
+  <div class="flex-1 flex flex-col">
+    <header class="text-white p-4 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-4">
+        <img src="https://www.mpool-consulting-do.de/wp-content/uploads/2020/05/cropped-cropped-mpool_consulting.png" alt="Mpool Consulting Logo" class="h-10 w-auto" />
+        <h1 class="text-2xl">mpool Consulting · Förderprogramm-Finder</h1>
+      </div>
+      <nav>
+        <a href="favorites.html">Meine Favoriten</a>
+        <button id="themeToggle" class="ml-4 p-2 rounded hover:bg-white/20 focus:outline-none" title="Dark / Light">
+          <svg id="themeToggleIcon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m8.66-9h1M3.34 12h1m13.02 6.36l.71.71M5.17 5.17l.71.71M5.17 18.83l.71-.71M18.83 5.17l-.71.71M12 5a7 7 0 100 14 7 7 0 000-14z" />
+          </svg>
+        </button>
+      </nav>
+    </header>
+
+    <main class="p-4 max-w-5xl mx-auto w-full flex-grow flex flex-col">
+      <div class="filter-section">
+        <h2 class="text-xl font-semibold flex items-center justify-between">Filteroptionen
+          <button id="filterToggle" class="ml-2 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none" title="Ein-/Ausblenden">
+            <svg id="filterToggleIcon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+          </button>
+        </h2>
+        <div id="filterContent" class="mt-4">
+          <div class="mb-4 flex flex-col md:flex-row gap-4">
+            <div class="flex-1">
+              <label class="block text-sm font-medium mb-1" for="regionFilter">Region</label>
+              <select id="regionFilter" class="w-full p-2 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                <option value="">Alle Regionen</option>
+                <option>Bundesweit</option>
+                <option>EU-weit</option>
+                <option>Baden-Württemberg</option>
+                <option>Bayern</option>
+                <option>Berlin</option>
+                <option>Brandenburg</option>
+                <option>Bremen</option>
+                <option>Hamburg</option>
+                <option>Hessen</option>
+                <option>Mecklenburg-Vorpommern</option>
+                <option>Niedersachsen</option>
+                <option>Nordrhein-Westfalen</option>
+                <option>Rheinland-Pfalz</option>
+                <option>Saarland</option>
+                <option>Sachsen</option>
+                <option>Sachsen-Anhalt</option>
+                <option>Schleswig-Holstein</option>
+                <option>Thüringen</option>
+              </select>
+            </div>
+            <div class="flex-1">
+              <label class="block text-sm font-medium mb-1" for="categoryFilter">Kategorie</label>
+              <select id="categoryFilter" class="w-full p-2 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                <option value="">Alle Kategorien</option>
+                <option>Digitalisierung</option>
+                <option>Innovation</option>
+                <option>KI</option>
+                <option>Energie</option>
+                <option>Umwelt</option>
+                <option>Start-up</option>
+                <!-- Weitere Kategorien hier -->
+              </select>
+            </div>
+          </div>
+          <!-- New Custom Dropdown for eligible applicants -->
+          <div class="mt-4">
+              <label class="block text-sm font-medium mb-1" for="eligibleDropdown">Förderberechtigte</label>
+              <div class="relative" id="eligibleDropdownContainer">
+                  <button type="button" id="eligibleDropdownButton" class="w-full bg-white p-2 border rounded-md shadow-sm text-left flex justify-between items-center focus:ring-blue-500 focus:border-blue-500">
+                      <span id="eligibleDropdownLabel">Alle auswählen</span>
+                      <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                          <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                  </button>
+                  <div id="eligibleDropdownPanel" class="hidden absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md border max-h-60 overflow-y-auto">
+                      <!-- Checkboxes will be populated here -->
+                  </div>
+              </div>
+          </div>
+          <!-- New Custom Dropdown for Funding Type -->
+          <div class="mt-4">
+            <label class="block text-sm font-medium mb-1" for="fundingTypeDropdown">Förderart</label>
+            <div class="relative" id="fundingTypeDropdownContainer">
+                <button type="button" id="fundingTypeDropdownButton" class="w-full bg-white p-2 border rounded-md shadow-sm text-left flex justify-between items-center focus:ring-blue-500 focus:border-blue-500">
+                    <span id="fundingTypeDropdownLabel">Alle auswählen</span>
+                    <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+                <div id="fundingTypeDropdownPanel" class="hidden absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md border max-h-60 overflow-y-auto">
+                    <!-- Checkboxes will be populated here -->
+                </div>
+            </div>
+          </div>
+          <!-- New Custom Dropdown for Company Size -->
+          <div class="mt-4">
+            <label class="block text-sm font-medium mb-1" for="companySizeDropdown">Unternehmensgröße</label>
+            <div class="relative" id="companySizeDropdownContainer">
+                <button type="button" id="companySizeDropdownButton" class="w-full bg-white p-2 border rounded-md shadow-sm text-left flex justify-between items-center focus:ring-blue-500 focus:border-blue-500">
+                    <span id="companySizeDropdownLabel">Alle auswählen</span>
+                    <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+                <div id="companySizeDropdownPanel" class="hidden absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md border max-h-60 overflow-y-auto">
+                    <!-- Checkboxes will be populated here -->
+                </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <section id="chat" class="flex-1 flex flex-col space-y-4 mb-4 overflow-y-auto"></section>
+      <form id="chatForm" class="mt-auto">
+        <input class="flex-1 p-3 border rounded-md" id="query" type="text" placeholder="Frage zu Förderprogrammen, z. B. 'KI Förderung NRW'" autocomplete="off" />
+        <button id="sendBtn" type="submit" class="text-white px-4 py-2 rounded-md">Senden</button>
+      </form>
+    </main>
+
+    <footer class="p-4 text-center text-sm">
+      © 2025 Mpool Consulting · Alle Rechte vorbehalten
+    </footer>
+  </div>
+</body>
+</html> 
