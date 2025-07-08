@@ -1,5 +1,5 @@
 //Ich muss das noch verstecken !!!!
-const OPENAI_API_KEY = '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';
+const OPENAI_API_KEY = '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';
 ////!!!!!
 
 
