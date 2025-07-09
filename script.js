@@ -1,8 +1,19 @@
-//Ich muss das noch verstecken !!!!
-const OPENAI_API_KEY = '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';
-////!!!!!
+// ⚠️ WICHTIG: API Key wurde entfernt für sichere GitHub-Veröffentlichung
+// Siehe SETUP-ANLEITUNG.md für die Einrichtung mit Cloudflare Workers
 
+// 🔥 WICHTIG: API KONFIGURATION 🔥
+// Option 1: Verwende deinen eigenen Cloudflare Worker (KOSTENLOS & SICHER)
+// 1. Gehe zu https://workers.cloudflare.com und erstelle einen Account (kostenlos)
+// 2. Erstelle einen neuen Worker und kopiere den Code aus 'cloudflare-worker.js'
+// 3. Füge deinen OpenAI API Key als Environment Variable hinzu: OPENAI_API_KEY = dein-key
+// 4. Deploy den Worker und kopiere die URL hierher:
+const PROXY_URL = 'https://holy-frost-aa8d.khayatisifeddine.workers.dev'; // z.B. https://dein-worker.username.workers.dev
 
+// Option 2: Verwende den öffentlichen Demo-Proxy (mit Limits)
+// const PROXY_URL = 'https://openai-proxy-demo.workers.dev'; // Nur für Tests!
+
+// Option 3: Direkter API Key (NICHT für GitHub!)
+const OPENAI_API_KEY = ''; // ⚠️ Leer lassen wenn du den Proxy verwendest!
 
 import Fuse from 'https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.esm.js';
 
@@ -1953,12 +1964,18 @@ async function askOpenAIChat(userMsg) {
 [\n  {\n    "title": "Beispielprogramm Alpha",\n    "description": "Beschreibung des Programms Alpha.",\n    "url": "https://beispiel.de/alpha",\n    "foerderhoehe": "bis 50%",\n    "zielgruppe": "KMU",\n    "antragsfrist": "laufend",\n    "foerderart": "Zuschuss",\n    "ansprechpartner": "Behörde X",\n    "region": "Bundesweit",\n    "category": "Digitalisierung",\n    "why": "Passt gut zu Aspekt A der Anfrage."},\n  {\n    "title": "Förderinitiative Beta",\n    "description": "Details zur Initiative Beta.",\n    "url": "https://initiative.org/beta",\n    "foerderhoehe": "bis 2 Mio. €",\n    "zielgruppe": "Forschungseinrichtungen",\n    "antragsfrist": "31.12.2024",\n    "foerderart": "Projektförderung",\n    "ansprechpartner": "Stiftung Y",\n    "region": "EU-weit",\n    "category": "Innovation",\n    "why": "Relevant aufgrund der genannten Projektziele."
   }\n]\nStelle sicher, dass die gesamte Antwort nur das geforderte JSON-Objekt ist, beginnend mit { und endend mit }.`;
 
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Verwende Proxy wenn konfiguriert, sonst direkt API Key
+    const apiUrl = PROXY_URL || 'https://api.openai.com/v1/chat/completions';
+    const headers = PROXY_URL 
+      ? { 'Content-Type': 'application/json' }  // Proxy braucht keinen Auth Header
+      : { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_API_KEY}`
+        };
+
+    const res = await fetch(apiUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`
-      },
+      headers: headers,
       body: JSON.stringify({
         model: 'gpt-4o',
         messages: [
@@ -2119,12 +2136,18 @@ async function search() {
     // Use filtered list for KI prompt and fuse search fallback
     const listForPrompt = filteredList.length ? filteredList : programmes;
     const prompt = `${docContext ? 'Firmenbeschreibung:\n' + docContext + '\n\n' : ''}Der Nutzer beschreibt sein Anliegen...`;
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Verwende Proxy wenn konfiguriert, sonst direkt API Key
+    const apiUrl = PROXY_URL || 'https://api.openai.com/v1/chat/completions';
+    const headers = PROXY_URL 
+      ? { 'Content-Type': 'application/json' }  // Proxy braucht keinen Auth Header
+      : { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_API_KEY}`
+        };
+
+    const res = await fetch(apiUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`
-      },
+      headers: headers,
       body: JSON.stringify({
         model: 'gpt-4o',
         messages: [
@@ -2139,7 +2162,21 @@ async function search() {
     content = content.replace(/```json|```/g, '').trim();
     let arr = null;
     try {
-      arr = extractJSONArray(content);
+      // Versuche JSON zu parsen - könnte ein Array oder ein Objekt mit 'programme' Array sein
+      try {
+        const parsed = JSON.parse(content);
+        if (Array.isArray(parsed)) {
+          arr = parsed;
+        } else if (parsed && Array.isArray(parsed.programme)) {
+          arr = parsed.programme;
+        }
+      } catch (e) {
+        // Fallback: Versuche JSON aus dem Text zu extrahieren
+        const match = content.match(/\[[\s\S]*\]/);
+        if (match) {
+          arr = JSON.parse(match[0]);
+        }
+      }
       // Fallback: falls KI kein "why" liefert, kurze Begründung generieren
       if (arr) {
         arr = arr.map(o => ({
