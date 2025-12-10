@@ -19,610 +19,6 @@ import Fuse from 'https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.esm.js';
 
 // Förderprogramme mit Links als Wissensbasis
 const programmes = [
-  // WEITERE PROGRAMME
-
-
-{
-  title: 'GreenEconomy.IN.NRW – Innovationswettbewerb',
-  description: 'EFRE/JTF-Innovationswettbewerb für Projekte zu Klima-, Umwelt- und Ressourcenschutz sowie Circular Economy.',
-  url: 'https://www.in.nrw/green-economy?utm_source=chatgpt.com',
-  foerderhoehe: 'bis zu 80% der zuwendungsfähigen Ausgaben (abhängig von Unternehmensgröße)',
-  zielgruppe: 'Unternehmen, KMU, Forschungseinrichtungen in Kooperation',
-  antragsfrist: 'ausschreibungsabhängig (befristete Calls)',
-  foerderart: 'Zuschuss',
-  ansprechpartner: 'Innovationsförderagentur NRW / MUNV NRW',
-  region: 'Nordrhein-Westfalen',
-  category: 'Ressourcen Management',
-  applicant_type: 'KMU'
-},
-{
-  title: 'Klimaanpassung.Unternehmen.NRW',
-  description: 'Zuschüsse für investive Klimaanpassungsmaßnahmen an Gebäuden und Liegenschaften kleiner und mittlerer Unternehmen.',
-  url: 'https://www.in.nrw/massnahmen/klimaanpassung-unternehmen-nrw?utm_source=chatgpt.com',
-  foerderhoehe: 'bis zu 60% der förderfähigen Ausgaben',
-  zielgruppe: 'KMU mit Standorten in NRW',
-  antragsfrist: 'voraussichtlich bis 31.03.2026 (bzw. Mittelerschöpfung)',
-  foerderart: 'Zuschuss',
-  ansprechpartner: 'Innovationsförderagentur NRW / Projektträger Jülich',
-  region: 'Nordrhein-Westfalen',
-  category: 'Maßnahmen zu Emissionsminderung',
-  applicant_type: 'KMU'
-},
-{
-  title: 'Bundesförderung Industrie und Klimaschutz (BIK) – Dekarbonisierung der Industrie',
-  description: 'Förderung von Investitionen zur Dekarbonisierung energieintensiver Industrieprozesse (z.B. Elektrifizierung, Wasserstoff, Prozessumstellung).',
-  url: 'https://www.ptj.de/foerdermoeglichkeiten/bik?utm_source=chatgpt.com',
-  foerderhoehe: 'Zuschuss bis zu rund 60% der förderfähigen Kosten (beihilferechtabhängig)',
-  zielgruppe: 'energieintensive Industrieunternehmen',
-  antragsfrist: 'Calls/Aufrufe, laufend bis Budgetausschöpfung',
-  foerderart: 'Zuschuss',
-  ansprechpartner: 'Kompetenzzentrum Klimaschutz in energieintensiven Industrien (KEI) / PtJ',
-  region: 'Deutschland',
-  category: 'Maßnahmen zu Emissionsminderung',
-  applicant_type: 'Industrie'
-},
-{
-  title: 'Bundesförderung Industrie und Klimaschutz (BIK) – CCU/CCS',
-  description: 'Förderung von Projekten zur Abscheidung, Nutzung und Speicherung von CO₂ in Industrie und Abfallwirtschaft (CCU/CCS).',
-  url: 'https://www.ptj.de/foerdermoeglichkeiten/bik?utm_source=chatgpt.com',
-  foerderhoehe: 'Zuschuss bis zu rund 60% der förderfähigen Kosten',
-  zielgruppe: 'Industrieunternehmen, Betreiber von Abfallverbrennungsanlagen',
-  antragsfrist: 'Calls/Aufrufe, laufend bis Budgetausschöpfung',
-  foerderart: 'Zuschuss',
-  ansprechpartner: 'KEI / Projektträger Jülich',
-  region: 'Deutschland',
-  category: 'Klimabilanzierung',
-  applicant_type: 'Industrie'
-},
-{
-  title: 'Fin.Connect.NRW – Konvoi Nachhaltigkeitsberichterstattung',
-  description: 'Kostenfreie Webinar- und Workshopreihe zur CSRD-konformen Nachhaltigkeitsberichterstattung inkl. Wesentlichkeitsanalyse und Datenerhebung.',
-  url: 'https://www.fin-connect-nrw.de/themen/nachhaltigkeitsberichtserstattung?utm_source=chatgpt.com',
-  foerderhoehe: 'kostenfreie Teilnahme',
-  zielgruppe: 'Unternehmen in NRW, insbesondere KMU',
-  antragsfrist: 'laufende Webinarreihen (Termine nach Ausschreibung)',
-  foerderart: 'Beratung / Seminare',
-  ansprechpartner: 'Fin.Connect.NRW / ZENIT GmbH',
-  region: 'Nordrhein-Westfalen',
-  category: 'Nachhaltigkeitsberichterstattung',
-  applicant_type: 'KMU'
-},
-{
-  title: 'Mittelstand-Digital Netzwerk',
-  description: 'Bundesweite Mittelstand-Digital-Zentren mit kostenlosen Workshops, Praxisprojekten und Informationen zu Digitalisierung und Nachhaltigkeit.',
-  url: 'https://www.mittelstand-digital.de?utm_source=chatgpt.com',
-  foerderhoehe: 'kostenfreie Angebote (Workshops, Beratungen, Online-Kurse)',
-  zielgruppe: 'KMU, Handwerk',
-  antragsfrist: 'laufend',
-  foerderart: 'Beratung / Seminare',
-  ansprechpartner: 'Mittelstand-Digital Zentren / BMWK',
-  region: 'Bundesweit',
-  category: 'Nachhaltige Seminare',
-  applicant_type: 'KMU'
-},
-{
-  title: 'WIPANO – Wissens- und Technologietransfer durch Patente und Normen',
-  description: 'Zuschüsse für KMU zur Patentierung innovativer Technologien sowie zur Überführung von Forschungsergebnissen in Normen und Standards.',
-  url: 'https://www.innovation-beratung-foerderung.de/INNO/Navigation/DE/WIPANO/wipano.html?utm_source=chatgpt.com',
-  foerderhoehe: 'bis zu 50% (Patentierung) bzw. bis zu 80–85% im Wissenstransfer, max. 200.000 € je Verbundpartner',
-  zielgruppe: 'KMU, Unternehmen, Hochschulen, Forschungseinrichtungen',
-  antragsfrist: 'Anträge fortlaufend bis 2026/2027 je Modul',
-  foerderart: 'Zuschuss',
-  ansprechpartner: 'Projektträger Jülich (PtJ) im Auftrag des BMWK',
-  region: 'Bundesweit',
-  category: 'Nachhaltige technologische Entwicklung in Produktionsprozess',
-  applicant_type: 'KMU'
-},
-{
-  title: 'EU Innovation Fund',
-  description: 'Großes EU-Programm zur Finanzierung innovativer CO₂-armen und net-zero Technologien (z.B. erneuerbare Energien, Wasserstoff, CCUS, Speicher).',
-  url: 'https://climate.ec.europa.eu/eu-action/eu-funding-climate-action/innovation-fund_en?utm_source=chatgpt.com',
-  foerderhoehe: 'bis zu 60% der relevanten Kosten, Gesamtbudget ca. 40 Mrd. € (2020–2030)',
-  zielgruppe: 'Unternehmen, Konsortien in EU/EWR',
-  antragsfrist: 'regelmäßige Calls und Auktionen',
-  foerderart: 'Zuschuss',
-  ansprechpartner: 'Europäische Kommission / CINEA',
-  region: 'EU-weit',
-  category: 'Energieeffizienz & Erneuerbare Energien',
-  applicant_type: 'Industrie / KMU'
-},
-
-
-{
-  title: 'Digitalisierung und Arbeit 4.0 (Bremen)',
-  description: 'Beratungsförderung für kleine und mittlere Unternehmen zur Gestaltung der digitalen Transformation von Arbeitsprozessen, Organisation und Personalentwicklung.',
-  url: 'https://www.foerderdatenbank.de/FDB/Content/DE/Foerderprogramm/Land/Bremen/digitalisierung-und-arbeit-4-0.html?utm_source=chatgpt.com',
-  foerderhoehe: 'Zuschuss zu Beratungskosten (Anteilfinanzierung, höhere Quote für KMU)',
-  zielgruppe: 'KMU mit Sitz in Bremen oder Bremerhaven',
-  antragsfrist: 'Laufend, bis Ausschöpfung der Mittel',
-  foerderart: 'Zuschuss (Beratung)',
-  ansprechpartner: 'Die Senatorin für Wirtschaft, Häfen und Transformation Bremen',
-  region: 'Bremen',
-  category: 'Digitalisierung',
-  applicant_type: 'KMU'
-},
-{
-  title: 'Unternehmen machen Klimaschutz (Baden-Württemberg)',
-  description: 'Landesprogramm mit zwei Bausteinen: geförderte Klimaschutzberatung (Treibhausgasbilanz, Transformationspfad, CSRD-Bezug) sowie Investitionsförderung für Klimaschutzmaßnahmen in Unternehmen.',
-  url: 'https://www.foerderdatenbank.de/FDB/Content/DE/Foerderprogramm/Land/Baden-Wuerttemberg/unternehmen-machen-klimaschutz.html?utm_source=chatgpt.com',
-  foerderhoehe: 'Zuschuss für Beratung und Investitionen, Höhe abhängig von Maßnahme und Unternehmensgröße',
-  zielgruppe: 'Unternehmen mit Sitz oder Standort in Baden-Württemberg',
-  antragsfrist: 'Mehrere Stichtage pro Jahr, Laufzeit derzeit bis 2027',
-  foerderart: 'Zuschuss (Beratung + Investition)',
-  ansprechpartner: 'Ministerium für Umwelt, Klima und Energiewirtschaft Baden-Württemberg',
-  region: 'Baden-Württemberg',
-  category: 'Klimabilanzierung',
-  applicant_type: 'KMU'
-},
-{
-  title: 'KMU-innovativ: Energieeffizienz, Klimaschutz und Klimaanpassung',
-  description: 'BMBF-Programm zur Förderung risikoreicher Forschungs- und Entwicklungsprojekte von KMU zu Energieeffizienz, Dekarbonisierung und Klimaanpassung.',
-  url: 'https://www.kmu-innovativ.de/de/energieeffizienz-klimaschutz-und-klimaanpassung-1663.html?utm_source=chatgpt.com',
-  foerderhoehe: 'Zuschuss, Fördersätze je nach Partner (KMU i. d. R. deutlich über 50%)',
-  zielgruppe: 'Innovative KMU, ggf. in Verbünden mit Forschungseinrichtungen',
-  antragsfrist: 'Mehrere Einreichungsstichtage pro Jahr',
-  foerderart: 'Zuschuss (FuE-Projekte)',
-  ansprechpartner: 'BMBF / Projektträger (siehe Programmseite)',
-  region: 'Bundesweit',
-  category: 'Maßnahmen zu Emissionsminderung',
-  applicant_type: 'KMU'
-},
-{
-  title: 'Klimaschutzverträge – CO₂-Differenzverträge (FRL KSV)',
-  description: 'Förderprogramm des Bundes für energieintensive Industriebranchen zur Errichtung und zum Betrieb klimaneutraler oder -armer Produktionsanlagen über langfristige CO₂-Differenzverträge.',
-  url: 'https://www.foerderdatenbank.de/FDB/Content/DE/Foerderprogramm/Bund/BMWi/foerderrichtlinie-klimaschutzvertraege.html?utm_source=chatgpt.com',
-  foerderhoehe: 'Ausgleich von Mehrkosten (CAPEX/OPEX) gegenüber fossiler Referenz über Vertragslaufzeit',
-  zielgruppe: 'Energieintensive Unternehmen und kommunale Unternehmen mit hohen THG-Emissionen',
-  antragsfrist: 'Vorbereitende Verfahren und Gebotsrunden mit festen Fristen',
-  foerderart: 'Zuschuss / Differenzvertrag',
-  ansprechpartner: 'Projektträger Jülich (PtJ) im Auftrag des BMWK',
-  region: 'Bundesweit',
-  category: 'Nachhaltige technologische Entwicklung in Produktionsprozess',
-  applicant_type: 'KMU'
-},
-{
-  title: 'INQA-Coaching – Beratung für die Arbeitswelt der Zukunft',
-  description: 'Bundesweites Coachingprogramm für KMU zu Themen wie Digitalisierung, Personal, Organisation und Arbeitsprozesse.',
-  url: 'https://www.inqa.de/DE/angebote/inqa-coaching/informationen-fuer-kmu/uebersicht.html',
-  foerderhoehe: 'Bis zu 12 Coaching-Tage à 1.200 € mit 80 % Zuschuss',
-  zielgruppe: 'Kleine und mittlere Unternehmen bis 249 Beschäftigte',
-  antragsfrist: 'Laufend (Förderzeitraum 2023–2027)',
-  foerderart: 'Zuschuss für Coaching',
-  ansprechpartner: 'INQA-Beratungsstellen / BMAS',
-  region: 'Bundesweit',
-  category: 'Digitalisierung',
-  applicant_type: 'KMU'
-},
-
-{
-  title: 'Potentialberatung NRW',
-  description: 'Beratungsprogramm für Unternehmen in NRW zur Verbesserung von Organisation, Personalentwicklung und Digitalisierung.',
-  url: 'https://www.esf.nrw/potentialberatung',
-  foerderhoehe: '40 % Zuschuss, max. 400 € je Tag, bis zu 8 Beratungstage',
-  zielgruppe: 'Unternehmen mit mind. 1 Beschäftigten und max. 249 Beschäftigten',
-  antragsfrist: 'Laufend',
-  foerderart: 'Zuschuss für Organisations- und Personalberatung',
-  ansprechpartner: 'Regionalagenturen / MAGS NRW',
-  region: 'Nordrhein-Westfalen',
-  category: 'Ressourcen Management',
-  applicant_type: 'KMU'
-},
-
-{
-  title: 'MID-Gutschein Digitalisierung (NRW)',
-  description: 'Gutscheinprogramm zur Finanzierung externer Dienstleistungen für Digitalisierungsprojekte in KMU.',
-  url: 'https://www.mittelstand-innovativ-digital.nrw/',
-  foerderhoehe: 'Bis zu 15.000 € Zuschuss, Förderquote bis 50 % der Projektkosten',
-  zielgruppe: 'Kleinst-, kleine und mittlere Unternehmen mit Sitz in NRW',
-  antragsfrist: 'Laufend, Antrag über monatliches Losverfahren',
-  foerderart: 'Zuschuss für Digitalisierungsprojekte',
-  ansprechpartner: 'Projektträger Jülich (PtJ)',
-  region: 'Nordrhein-Westfalen',
-  category: 'Digitalisierung',
-  applicant_type: 'KMU'
-},
-{
-  title: 'MID-Assistent/in (NRW)',
-  description: 'Lohnzuschuss für die Einstellung eines Hochschulabsolventen zur Umsetzung von Digitalisierungs-, Innovations- oder Nachhaltigkeitsprojekten.',
-  url: 'https://www.mittelstand-innovativ-digital.nrw/antrag/mid-assistenz',
-  foerderhoehe: 'Bis zu 48.000 € Zuschuss über max. 24 Monate',
-  zielgruppe: 'Kleinst- und kleine Unternehmen (< 50 Beschäftigte) in NRW',
-  antragsfrist: 'Laufend (Wartesaalverfahren)',
-  foerderart: 'Zuschuss für Personalkosten',
-  ansprechpartner: 'Projektträger Jülich (PtJ)',
-  region: 'Nordrhein-Westfalen',
-  category: 'Digitalisierung',
-  applicant_type: 'KMU'
-},
-
-{
-  title: 'QualiScheck Rheinland-Pfalz',
-  description: 'Förderung von beruflichen Weiterbildungen für Beschäftigte, z. B. zu Nachhaltigkeit, Energieeffizienz oder Digitalisierung.',
-  url: 'https://esf.rlp.de/berufliche-weiterbildung/qualischeck',
-  foerderhoehe: 'Bis zu 60 % der Weiterbildungskosten, max. 1.500 € pro Person und Jahr',
-  zielgruppe: 'Beschäftigte mit Wohn- oder Arbeitsort in Rheinland-Pfalz',
-  antragsfrist: 'Laufend',
-  foerderart: 'Zuschuss für Weiterbildung',
-  ansprechpartner: 'ESF-Regionalstellen RLP',
-  region: 'Rheinland-Pfalz',
-  category: 'Nachhaltige Seminare',
-  applicant_type: 'KMU'
-},
-{
-  title: 'Mittelstand-Digital Zentrum Klima.Neutral.Digital',
-  description: 'Kostenfreie Unterstützung von KMU beim Weg zur Klimaneutralität durch Quick-Checks, Workshops und Digitalisierungsprojekte.',
-  url: 'https://klima-neutral-digital.de/',
-  foerderhoehe: 'Kostenfreie Informationsangebote, Workshops und Erstberatungen',
-  zielgruppe: 'KMU und Handwerksbetriebe bis 500 Beschäftigte',
-  antragsfrist: 'Laufend',
-  foerderart: 'Kostenfreie Beratung & Seminare',
-  ansprechpartner: 'Mittelstand-Digital Zentrum Klima.Neutral.Digital',
-  region: 'Bundesweit (Schwerpunkt Baden-Württemberg & Umgebung)',
-  category: 'Energieeffizienz & Erneuerbare Energien',
-  applicant_type: 'KMU'
-},
-{
-  title: 'Mittelstand-Digital Zentrum Zukunftskultur',
-  description: 'Unterstützt KMU beim Aufbau einer zukunftsfähigen, digitalen und nachhaltigen Unternehmenskultur – mit Fokus auf KI, New Work und Change Management.',
-  url: 'https://www.digitalzentrum-zukunftskultur.de/',
-  foerderhoehe: 'Kostenfreie Workshops, Coachings und Praxisprojekte',
-  zielgruppe: 'Kleine und mittlere Unternehmen aller Branchen',
-  antragsfrist: 'Laufend (verlängert bis Ende 2026)',
-  foerderart: 'Kostenfreie Beratung & Seminare',
-  ansprechpartner: 'Mittelstand-Digital Zentrum Zukunftskultur',
-  region: 'Bundesweit',
-  category: 'Nachhaltige Seminare',
-  applicant_type: 'KMU'
-},
-{
-  title: 'Mittelstand-Digital Zentrum Handwerk',
-  description: 'Digitalisierungs- und Nachhaltigkeitsberatung speziell für Handwerksbetriebe, inkl. Demonstratoren, Praxisbeispiele und Qualifizierungsangebote.',
-  url: 'https://handwerkdigital.de/',
-  foerderhoehe: 'Kostenfreie Informations- und Qualifizierungsangebote',
-  zielgruppe: 'Handwerksbetriebe und handwerksnahe KMU',
-  antragsfrist: 'Laufend',
-  foerderart: 'Kostenfreie Beratung & Seminare',
-  ansprechpartner: 'Mittelstand-Digital Zentrum Handwerk / ZWH',
-  region: 'Bundesweit (Schwerpunkt NRW)',
-  category: 'Digitalisierung',
-  applicant_type: 'KMU'
-},
-
-
-
-
-
-    {
-    title: 'Unternehmen machen Klimaschutz – Beratungsförderung (BW)',
-    description: 'Zuschuss für Beratungen zur Erstellung einer Treibhausgasbilanz, eines Transformationspfads und eines Klimaschutzmaßnahmenplans.',
-    url: 'https://um.baden-wuerttemberg.de/de/umwelt-natur/umwelt-und-wirtschaft/angebote-fuer-unternehmen/foerderprogramm-unternehmen-machen-klimaschutz',
-    foerderhoehe: 'Zuschuss zu mehreren Beratungstagen, Prozentsatz je Modul',
-    zielgruppe: 'Unternehmen in Baden-Württemberg',
-    antragsfrist: 'laufend (bis 2027)',
-    foerderart: 'Zuschuss',
-    ansprechpartner: 'Ministerium für Umwelt, Klima und Energiewirtschaft Baden-Württemberg',
-    region: 'Baden-Württemberg',
-    category: 'Klimabilanzierung',
-    applicant_type: 'KMU'
-  },
-  {
-    title: 'Unternehmen machen Klimaschutz – Investitionsförderung (BW)',
-    description: 'Förderung von Investitionen, die Treibhausgasemissionen im Unternehmen deutlich reduzieren.',
-    url: 'https://www.nachhaltigkeitsstrategie.de/wirtschaft/klimaschutz/foerderprogramm-unternehmen-machen-klimaschutz/investitionsfoerderung',
-    foerderhoehe: 'Zuschuss zu Investitionskosten, Obergrenzen projektabhängig',
-    zielgruppe: 'Unternehmen in Baden-Württemberg',
-    antragsfrist: 'Stichtage laut Richtlinie (i. d. R. 2x jährlich)',
-    foerderart: 'Zuschuss',
-    ansprechpartner: 'Ministerium für Umwelt, Klima und Energiewirtschaft Baden-Württemberg',
-    region: 'Baden-Württemberg',
-    category: 'Maßnahmen zu Emissionsminderung',
-    applicant_type: 'KMU'
-  },
-  {
-    title: 'Klimaschutz-Plus – CO₂-Minderungsprogramm Baden-Württemberg',
-    description: 'Förderung von Maßnahmen zur Energieeinsparung und CO₂-Minderung in Unternehmen und Kommunen.',
-    url: 'https://www.kea-bw.de/foerderprogrammsuche/detail/klimaschutz-plus-co2-minderungsprogramm',
-    foerderhoehe: 'Zuschuss je eingesparter Tonne CO₂ (Deckelung pro Projekt)',
-    zielgruppe: 'Unternehmen, Kommunen, sonstige Einrichtungen in Baden-Württemberg',
-    antragsfrist: 'laufend / laut aktueller Ausschreibung',
-    foerderart: 'Zuschuss',
-    ansprechpartner: 'KEA Klimaschutz- und Energieagentur Baden-Württemberg',
-    region: 'Baden-Württemberg',
-    category: 'Maßnahmen zu Emissionsminderung',
-    applicant_type: 'KMU'
-  },
-  {
-    title: 'Klimaschutz-Plus – Struktur-, Qualifizierungs- und Informationsprogramm',
-    description: 'Fördert Qualifizierungs-, Informations- und Netzwerkprojekte zu Klimaschutz, CO₂-Bilanzierung und Klimastrategien.',
-    url: 'https://www.kea-bw.de/foerderprogrammsuche/detail/klimaschutz-plus-struktur-qualifizierungs-und-informationsprogramm-teil-2',
-    foerderhoehe: 'Projektbezogene Zuschüsse, Höhe abhängig vom Vorhaben',
-    zielgruppe: 'Unternehmen, Kommunen, Bildungsträger in Baden-Württemberg',
-    antragsfrist: 'laufend / nach Aufrufen',
-    foerderart: 'Zuschuss',
-    ansprechpartner: 'Ministerium für Umwelt, Klima und Energiewirtschaft Baden-Württemberg',
-    region: 'Baden-Württemberg',
-    category: 'Nachhaltige Seminare',
-    applicant_type: 'Projektträger'
-  },
-
-  {
-    title: 'Kooperationszusammenschlüsse Circular Economy (EFRE.NRW)',
-    description: 'Förderung von Zusammenschlüssen mehrerer KMU zur Entwicklung zirkulärer Geschäftsmodelle entlang einer Wertschöpfungskette.',
-    url: 'https://www.efre.nrw/einfach-machen/foerderung-finden/kooperationszusammenschluesse-circular-economy',
-    foerderhoehe: 'Zuschuss zu externen Beratungs- und Koordinationsleistungen',
-    zielgruppe: 'Konsortien aus mind. fünf KMU in NRW',
-    antragsfrist: 'laufend',
-    foerderart: 'Zuschuss',
-    ansprechpartner: 'EFRE/JTF-Programm NRW / Effizienz-Agentur NRW',
-    region: 'Nordrhein-Westfalen',
-    category: 'Nachhaltiger Einkauf',
-    applicant_type: 'KMU'
-  },
-  
-  
-  {
-    title: 'BAFA – Energieberatung für Nichtwohngebäude, Anlagen und Systeme (Modul 1 Energieaudit)',
-    description: 'Zuschuss zur Durchführung eines Energieaudits nach DIN EN 16247 als Grundlage für Effizienzmaßnahmen und Klimabilanz.',
-    url: 'https://www.bafa.de/DE/Energie/Energieberatung/Nichtwohngebaeude_Anlagen_Systeme/nichtwohngebaeude_anlagen_systeme_node.html',
-    foerderhoehe: 'Zuschuss zum Beratungshonorar (Fördersatz und Höchstbeträge abhängig von den Energiekosten)',
-    zielgruppe: 'Unternehmen, Kommunen und andere Einrichtungen',
-    antragsfrist: 'laufend',
-    foerderart: 'Zuschuss',
-    ansprechpartner: 'BAFA',
-    region: 'Deutschland',
-    category: 'Klimabilanzierung',
-    applicant_type: 'KMU'
-  },
-  {
-    title: 'LIFE Clean Energy Transition',
-    description: 'EU-Programm zur Förderung von Projekten zur Energiewende, Energieeffizienz und Nutzung erneuerbarer Energien.',
-    url: 'https://cinea.ec.europa.eu/programmes/life/clean-energy-transition_en',
-    foerderhoehe: 'EU-Zuschuss, typischerweise bis zu ca. 95% der förderfähigen Projektkosten',
-    zielgruppe: 'Unternehmen, öffentliche Einrichtungen, NGOs, Forschungseinrichtungen',
-    antragsfrist: 'jährliche EU-Ausschreibungen',
-    foerderart: 'Zuschuss',
-    ansprechpartner: 'Europäische Kommission / CINEA',
-    region: 'EU-weit',
-    category: 'Energieeffizienz & Erneuerbare Energien',
-    applicant_type: 'Projektträger'
-  },
-  {
-    title: 'LIFE – Circular Economy and Quality of Life',
-    description: 'EU-Förderung für Projekte zur Kreislaufwirtschaft, Ressourceneffizienz und Verbesserung der Umweltqualität.',
-    url: 'https://cinea.ec.europa.eu/programmes/life/circular-economy-and-quality-life_en',
-    foerderhoehe: 'EU-Zuschuss, Co-Funding in der Regel 60–75% der Projektkosten',
-    zielgruppe: 'Unternehmen, Kommunen, Forschungseinrichtungen, NGOs',
-    antragsfrist: 'jährliche EU-Ausschreibungen',
-    foerderart: 'Zuschuss',
-    ansprechpartner: 'Europäische Kommission / CINEA',
-    region: 'EU-weit',
-    category: 'Ressourcen Management',
-    applicant_type: 'Projektträger'
-  },
-  {
-    title: 'Nachhaltig wirken – Förderung gemeinwohlorientierter Unternehmen',
-    description: 'Bundesprogramm zur Stärkung gemeinwohlorientierter Unternehmen, inkl. Beratung, Qualifizierung und Unterstützung bei nachhaltigen Geschäftsmodellen.',
-    url: 'https://www.bmwk.de/Redaktion/DE/Dossier/foerderprogramm-gemeinwohlorientierte-unternehmen.html',
-    foerderhoehe: 'Projektbezogene Zuschüsse je nach Modul',
-    zielgruppe: 'Gemeinwohlorientierte Unternehmen und Gründungen',
-    antragsfrist: 'Ausschreibungsrunden mit festen Stichtagen',
-    foerderart: 'Zuschuss',
-    ansprechpartner: 'BMWK / Projektträger (z. B. IBYKUS AG)',
-    region: 'Deutschland',
-    category: 'Nachhaltigkeitsberichterstattung',
-    applicant_type: 'KMU'
-  },
-  {
-    title: 'Exportinitiative Umweltschutz (EXI)',
-    description: 'Förderprogramm zur internationalen Verbreitung deutscher Umwelt- und Effizienztechnologien und zur Unterstützung nachhaltiger Infrastrukturen im Ausland.',
-    url: 'https://www.exportinitiative-umweltschutz.de/',
-    foerderhoehe: 'Projektbezogene Zuschüsse für Pilot- und Referenzprojekte',
-    zielgruppe: 'GreenTech-Unternehmen, insbesondere KMU',
-    antragsfrist: 'Ausschreibungsrunden mit Einreichungsfristen',
-    foerderart: 'Zuschuss',
-    ansprechpartner: 'Bundesministerium für Umwelt, Naturschutz, nukleare Sicherheit und Verbraucherschutz (BMUV)',
-    region: 'Deutschland / international',
-    category: 'Maßnahmen zu Emissionsminderung',
-    applicant_type: 'KMU'
-  },
-
-  {
-    title: 'BAFA – Energieberatung für Nichtwohngebäude, Anlagen und Systeme (EBN)',
-    description: 'Zuschüsse für Energieberatungen und Sanierungsfahrpläne in Nichtwohngebäuden von Unternehmen und Kommunen.',
-    url: 'https://www.bafa.de/DE/Energie/Energieberatung/Nichtwohngebaeude_Anlagen_Systeme/nichtwohngebaeude_anlagen_systeme_node.html',
-    foerderhoehe: 'bis zu 80% des Beratungshonorars',
-    zielgruppe: 'Unternehmen, Kommunen, gemeinnützige Organisationen',
-    antragsfrist: 'laufend',
-    foerderart: 'Zuschuss',
-    ansprechpartner: 'BAFA',
-    region: 'Deutschland',
-    category: 'Energieeffizienz & Erneuerbare Energien',
-    applicant_type: 'KMU'
-  },
-  {
-    title: 'EEW – Modul 5 Transformationskonzepte (BAFA)',
-    description: 'Förderung von Transformationskonzepten mit CO₂-Bilanz, Klimazielen und Maßnahmenplan zur Dekarbonisierung des Unternehmens.',
-    url: 'https://energiekonsens.de/foerderung/bafa-energieeffizienz-modul5',
-    foerderhoehe: 'bis zu 60% der Kosten (KMU), max. 60.000–90.000 € Zuschuss',
-    zielgruppe: 'Unternehmen der gewerblichen Wirtschaft',
-    antragsfrist: 'laufend',
-    foerderart: 'Zuschuss',
-    ansprechpartner: 'BAFA / BMWK',
-    region: 'Deutschland',
-    category: 'Klimabilanzierung',
-    applicant_type: 'KMU'
-  },
-  {
-    title: 'KfW – Klimaschutzoffensive für den Mittelstand (293)',
-    description: 'Förderkredit mit Klimazuschuss für Investitionen in klimafreundliche Anlagen, Produktionsverfahren und Energieversorgung.',
-    url: 'https://www.kfw.de/293',
-    foerderhoehe: 'Kredit bis 25 Mio. € + Klimazuschuss bis ca. 6%',
-    zielgruppe: 'Mittelständische Unternehmen, Freiberufler',
-    antragsfrist: 'laufend',
-    foerderart: 'Kredit mit Zuschuss',
-    ansprechpartner: 'KfW Bankengruppe',
-    region: 'Deutschland, EU',
-    category: 'Maßnahmen zu Emissionsminderung',
-    applicant_type: 'KMU'
-  },
-  {
-    title: 'Ressource.NRW – Ressourceneffizienz & Circular Economy',
-    description: 'EFRE-Förderprogramm für Investitionen in innovative Anlagen mit Demonstrationscharakter zur Ressourceneffizienz und Circular Economy.',
-    url: 'https://www.efre.nrw/einfach-machen/foerderung-finden/ressourcenrw',
-    foerderhoehe: 'Zuschuss je nach Projekt, mehrere Mio. € Programmvolumen',
-    zielgruppe: 'KMU in Nordrhein-Westfalen',
-    antragsfrist: 'Einreichungsrunden bis voraussichtlich 30.06.2026',
-    foerderart: 'Zuschuss',
-    ansprechpartner: 'LANUV NRW / Effizienz-Agentur NRW',
-    region: 'Nordrhein-Westfalen',
-    category: 'Ressourcen Management',
-    applicant_type: 'KMU'
-  },
-  {
-    title: 'BMUV-Umweltinnovationsprogramm (KfW 230)',
-    description: 'Förderung großtechnischer Pilotprojekte zur Vermeidung und Verminderung von Umweltbelastungen, z. B. in Produktion und Abfallwirtschaft.',
-    url: 'https://www.kfw.de/inlandsfoerderung/Unternehmen/Energie-und-Umwelt/Förderprodukte/BMU-Umweltinnovationsprogramm-(230)/',
-    foerderhoehe: 'Kredit und Zuschussanteile für investive Demonstrationsvorhaben',
-    zielgruppe: 'Unternehmen, kommunale Unternehmen',
-    antragsfrist: 'laufend',
-    foerderart: 'Kredit/Zuschuss',
-    ansprechpartner: 'BMUV / KfW',
-    region: 'Deutschland',
-    category: 'Maßnahmen zu Emissionsminderung',
-    applicant_type: 'KMU'
-  },
-  {
-    title: 'KMU-innovativ: Ressourcen- und Kreislaufwirtschaft',
-    description: 'BMBF-Förderprogramm für risikoreiche FuE-Vorhaben zu Ressourceneffizienz und Circular Economy in KMU.',
-    url: 'https://www.foerderdatenbank.de/FDB/Content/DE/Foerderprogramm/Bund/BMBF/kmu-innovativ-ressourcen-kreislaufwirtschaft.html',
-    foerderhoehe: 'bis zu 60% der Projektkosten (KMU)',
-    zielgruppe: 'Forschende KMU, Verbundprojekte mit Wissenschaft',
-    antragsfrist: 'laufende Bekanntmachungen',
-    foerderart: 'Zuschuss',
-    ansprechpartner: 'BMBF / Projektträger',
-    region: 'Deutschland',
-    category: 'Nachhaltige technologische Entwicklung in Produktionsprozess',
-    applicant_type: 'KMU'
-  },
-  {
-    title: 'DBU – Projektförderung Umwelttechnik & Ressourcen',
-    description: 'Förderung modellhafter Projekte zu Umwelttechnik, Klima- und Ressourcenschutz mit besonderem Fokus auf mittelständische Unternehmen.',
-    url: 'https://www.dbu.de/foerderung/projektfoerderung/',
-    foerderhoehe: 'individuell, häufig bis ca. 50% der Projektkosten',
-    zielgruppe: 'Unternehmen, Forschungseinrichtungen, Vereine',
-    antragsfrist: 'laufend',
-    foerderart: 'Zuschuss',
-    ansprechpartner: 'Deutsche Bundesstiftung Umwelt (DBU)',
-    region: 'Deutschland',
-    category: 'Ressourcen Management',
-    applicant_type: 'KMU'
-  },
-  {
-    title: 'DBU – Förderthema Nachhaltigkeitskommunikation, -bildung und -bewertung',
-    description: 'Förderung von Bildungs- und Kommunikationsprojekten zu Nachhaltigkeit, z. B. Trainings, Seminare und Qualifizierungsangebote.',
-    url: 'https://www.dbu.de/foerderung/projektfoerderung/foerderthemen/nachhaltigkeitskommunikation-bildung-und-bewertung/',
-    foerderhoehe: 'projektabhängig, überwiegend Zuschussförderung',
-    zielgruppe: 'Bildungsträger, Unternehmen, Vereine, Kommunen',
-    antragsfrist: 'laufend',
-    foerderart: 'Zuschuss',
-    ansprechpartner: 'Deutsche Bundesstiftung Umwelt (DBU)',
-    region: 'Deutschland',
-    category: 'Nachhaltige Seminare',
-    applicant_type: 'Projektträger'
-  },
-  {
-    title: 'Bundesförderung für effiziente Wärmenetze (BEW)',
-    description: 'Zuschüsse für Neubau und Dekarbonisierung effizienter Wärmenetze mit hohem Anteil erneuerbarer Energien.',
-    url: 'https://www.bafa.de/DE/Energie/Energieeffizienz/Waermenetze/Effiziente_Waermenetze/effiziente_waermenetze_node.html',
-    foerderhoehe: 'bis zu 50% der förderfähigen Kosten, max. 100 Mio. € je Vorhaben',
-    zielgruppe: 'Unternehmen, Kommunen, Netzbetreiber, Genossenschaften',
-    antragsfrist: 'laufend',
-    foerderart: 'Zuschuss',
-    ansprechpartner: 'BAFA',
-    region: 'Deutschland',
-    category: 'Energiebereitstellung',
-    applicant_type: 'Projektträger'
-  },
-
-  {
-    title: 'Digitalbonus.Bayern',
-    description: 'Zuschussprogramm des Freistaats Bayern zur Digitalisierung kleiner Unternehmen und zur Verbesserung der IT-Sicherheit.',
-    url: 'https://www.stmwi.bayern.de/foerderungen/digitalbonus-bayern/?utm_source=chatgpt.com',
-    foerderhoehe: 'bis zu 50 % Zuschuss, max. 10.000 € (Standard) bzw. 50.000 € (Plus)',
-    zielgruppe: 'Kleine Unternehmen der gewerblichen Wirtschaft in Bayern',
-    antragsfrist: 'laufend, aktuell bis 31.12.2027',
-    foerderart: 'Zuschuss',
-    ansprechpartner: 'Bayerisches Staatsministerium für Wirtschaft, Landesentwicklung und Energie / Bezirksregierungen',
-    region: 'Bayern',
-    category: 'Digitalisierung',
-    applicant_type: 'KMU'
-  },
-  {
-    title: 'Digitalbonus.Niedersachsen-innovativ',
-    description: 'Landesprogramm zur Förderung innovativer Digitalisierungsprojekte und Verbesserung der IT-Sicherheit in niedersächsischen KMU.',
-    url: 'https://www.wirtschaftsregion-celle.de/F%C3%B6rderprogramme/Digitalisierung/Digitalbonus-Niedersachsen/?utm_source=chatgpt.com',
-    foerderhoehe: 'Zuschuss 20–35 % der Ausgaben, mind. 3.000 € bis max. 50.000 €',
-    zielgruppe: 'KMU und freiberuflich Tätige mit Sitz in Niedersachsen',
-    antragsfrist: 'laufend, bis Mittel ausgeschöpft',
-    foerderart: 'Zuschuss',
-    ansprechpartner: 'NBank Niedersachsen',
-    region: 'Niedersachsen',
-    category: 'Digitalisierung',
-    applicant_type: 'KMU'
-  },
-  {
-    title: 'Brandenburgischer Innovationsgutschein (BIG – Digital)',
-    description: 'Zuschüsse zur Vorbereitung und Umsetzung von Digitalisierungsmaßnahmen (Beratung, Implementierung, Schulung) in Brandenburger Unternehmen.',
-    url: 'https://www.ilb.de/de/wirtschaft/zuschuesse/brandenburgischer-innovationsgutschein-big-digital/?utm_source=chatgpt.com',
-    foerderhoehe: 'bis zu 50 % Zuschuss; max. 50.000 € (Beratung/Schulung) bzw. 250.000 € (Implementierung)',
-    zielgruppe: 'KMU und Handwerksbetriebe mit Sitz in Brandenburg',
-    antragsfrist: 'laufend, abhängig von verfügbaren Mitteln',
-    foerderart: 'Zuschuss',
-    ansprechpartner: 'Investitionsbank des Landes Brandenburg (ILB)',
-    region: 'Brandenburg',
-    category: 'Digitalisierung',
-    applicant_type: 'KMU'
-  },
-  {
-    title: 'ERP-Förderkredit Digitalisierung (KfW 511/512)',
-    description: 'Bundesweites KfW-Darlehen zur Finanzierung von Investitionen und Betriebsmitteln für Digitalisierungsprojekte, inkl. möglichem Förderzuschuss.',
-    url: 'https://www.kfw.de/inlandsfoerderung/Unternehmen/Innovation-und-Digitalisierung/F%C3%B6rderprodukte/ERP-F%C3%B6rderkredit-Digitalisierung-%28511-512%29/?utm_source=chatgpt.com',
-    foerderhoehe: 'zinsgünstiger Kredit bis zu 25 Mio. € und bis zu 100 % der förderfähigen Kosten; Zuschuss bis max. 200.000 € möglich',
-    zielgruppe: 'Freiberufler, KMU und größere Mittelständler (bis 500 Mio. € Jahresumsatz)',
-    antragsfrist: 'laufend',
-    foerderart: 'Darlehen mit Förderzuschuss',
-    ansprechpartner: 'Hausbank / KfW',
-    region: 'Bundesweit',
-    category: 'Digitalisierung',
-    applicant_type: 'KMU'
-  },
-  {
-    title: 'NRW.BANK.Digitalisierungskredit',
-    description: 'Darlehensprogramm zur Finanzierung von Digitalisierungsmaßnahmen in Unternehmen in Nordrhein-Westfalen.',
-    url: 'https://www.nrwbank.de/de/foerderung/foerderprodukte/15914/produktdetail.html?utm_source=chatgpt.com',
-    foerderhoehe: 'zinsgünstiges Darlehen, je nach Vorhaben bis zu mehreren Mio. € möglich',
-    zielgruppe: 'Unternehmen der gewerblichen Wirtschaft und Freiberufler mit Investitionsort in NRW',
-    antragsfrist: 'laufend',
-    foerderart: 'Darlehen',
-    ansprechpartner: 'NRW.BANK (Antrag über die Hausbank)',
-    region: 'Nordrhein-Westfalen',
-    category: 'Digitalisierung',
-    applicant_type: 'KMU'
-  },
-  {
-    title: 'ERP-Gründerkredit – StartGeld',
-    description: 'Bundesweiter KfW-Kredit für Gründer und junge Unternehmen zur Finanzierung von Investitionen und Betriebsmitteln in der Startphase.',
-    url: 'https://www.kfw.de/inlandsfoerderung/Unternehmen/?utm_source=chatgpt.com',
-    foerderhoehe: 'zinsgünstiger Kredit bis zu rund 200.000 € (Investitionen und Betriebsmittel, je nach aktueller Kondition)',
-    zielgruppe: 'Existenzgründer und kleine Unternehmen bis 5 Jahre nach Gründung',
-    antragsfrist: 'laufend',
-    foerderart: 'Darlehen',
-    ansprechpartner: 'Hausbank / KfW',
-    region: 'Bundesweit',
-    category: 'Gründung',
-    applicant_type: 'KMU'
-  },
-
   {
     title: 'Digital Jetzt – Investitionsförderung für KMU',
     description: 'Förderung für Digitalisierungsvorhaben im Mittelstand.',
@@ -647,7 +43,18 @@ const programmes = [
     region: 'Bundesweit',
     category: 'Innovation'
   },
-
+  {
+    title: 'go-digital',
+    description: 'Beratung und Umsetzung für die Digitalisierung von Geschäftsprozessen.',
+    url: 'https://www.innovation-beratung-foerderung.de/INNO/Navigation/DE/go-digital/go-digital.html?utm_source=chatgpt.com',
+    foerderhoehe: 'bis zu 50%',
+    zielgruppe: 'KMU, Handwerk',
+    antragsfrist: 'laufend',
+    foerderart: 'Zuschuss',
+    ansprechpartner: 'BMWK',
+    region: 'Bundesweit',
+    category: 'Digitalisierung'
+  },
   {
     title: 'ZIM – Zentrales Innovationsprogramm Mittelstand (englisch)',
     description: 'Funding for innovative SMEs in Germany (English).',
@@ -665,7 +72,11 @@ const programmes = [
     region: 'Bundesweit',
     category: 'KI'
   },
-
+  {
+    title: 'Technologieprogramme Künstliche Intelligenz',
+    description: 'Aktuelle Technologieprogramme im Bereich KI.',
+    url: 'https://www.digitale-technologien.de/DT/Navigation/DE/ProgrammeProjekte/AktuelleTechnologieprogramme/Kuenstliche_Intelligenz/ki.html?utm_source=chatgpt.com'
+  },
   {
     title: 'Forschungszulage',
     description: 'Steuerliche Förderung von Forschung und Entwicklung.',
@@ -715,7 +126,11 @@ const programmes = [
     region: 'EU-weit',
     category: 'Innovation'
   },
-
+  {
+    title: 'KI-Innovationswettbewerb',
+    description: 'Wettbewerblicher Aufruf zur Entwicklung innovativer KI-Plattformen und -Ökosysteme.',
+    url: 'https://www.digitale-technologien.de/DT/Navigation/DE/ProgrammeProjekte/AktuelleTechnologieprogramme/Kuenstliche_Intelligenz/ki_innovationswettbewerb.html?utm_source=chatgpt.com'
+  },
   {
     title: 'EXIST-Gründungsstipendium',
     description: '12 Monate Lebenshaltungs- und Sachkostenförderung für technologieorientierte Gründungsteams.',
@@ -750,7 +165,11 @@ const programmes = [
     description: 'Förderlinien für KI, Robotik und Datenökosysteme im EU-Rahmenprogramm.',
     url: 'https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/home?utm_source=chatgpt.com'
   },
-  
+  {
+    title: 'AI Innovation Fund (EU‑Pilot)',
+    description: 'Pilotförderung zur Entwicklung vertrauenswürdiger KI-Lösungen in Europa.',
+    url: 'https://digital-strategy.ec.europa.eu/en/funding/ai-innovation?utm_source=chatgpt.com'
+  },
   {
     title: 'EIT Digital Challenge',
     description: 'Preisgelder und Accelerator‑Support für Scale‑ups aus dem Bereich Digital & KI.',
@@ -761,7 +180,11 @@ const programmes = [
     description: 'Seed-Finanzierung für High-Tech-Startups bis zu 1 Mio. € in der Startphase.',
     url: 'https://www.htgf.de/?utm_source=chatgpt.com'
   },
-
+  {
+    title: 'CEF Digital – Connecting Europe Facility',
+    description: 'Förderung für europaweite digitale Infrastruktur und 5G-Korridore.',
+    url: 'https://digital-strategy.ec.europa.eu/en/funding/cef-digital?utm_source=chatgpt.com'
+  },
   {
     title: 'progres.nrw – Batteriespeicher',
     description: 'Förderung von Batteriespeichern in Verbindung mit einer Photovoltaikanlage zur Speicherung von regenerativ erzeugtem Strom.',
@@ -801,7 +224,19 @@ const programmes = [
     category: 'Forschung',
     applicant_type: 'KMU'
   },
-
+  {
+    title: 'Klimaschutzoffensive für Unternehmen (293)',
+    description: 'Förderung klimafreundlicher Aktivitäten und strategischer Transformationstechnologien. Unterstützt Unternehmen beim ökologisch nachhaltigen Wirtschaften.',
+    url: 'https://www.kfw.de/inlandsfoerderung/Unternehmen/Energie-Umwelt/F%C3%B6rderprodukte/Klimaschutzoffensive-f%C3%BCr-Unternehmen-(293)/',
+    foerderhoehe: 'Bis zu 25 Mio. Euro pro Vorhaben, bis zu 100% der Kosten',
+    zielgruppe: 'Unternehmen der gewerblichen Wirtschaft, Freiberufler, kommunale Unternehmen',
+    antragsfrist: 'Laufend',
+    foerderart: 'Kredit',
+    ansprechpartner: 'KfW Bankengruppe',
+    region: 'Deutschland',
+    category: 'Klimaschutz',
+    applicant_type: 'KMU'
+  },
   {
     title: 'Heizungsförderung für Unternehmen – Nichtwohngebäude (522)',
     description: 'Zuschuss für den Kauf und Einbau klimafreundlicher Heizungen in Nichtwohngebäuden. Förderung von Wärmepumpen, Biomasseanlagen, Solarthermie.',
@@ -815,9 +250,45 @@ const programmes = [
     category: 'Energie',
     applicant_type: 'KMU'
   },
-
-
-
+  {
+    title: 'Erneuerbare Energien – Standard (270)',
+    description: 'Förderkredit für Anlagen zur Erzeugung von Strom und Wärme aus erneuerbaren Energien sowie für Netze und Speicher.',
+    url: 'https://www.kfw.de/inlandsfoerderung/Unternehmen/Energie-und-Umwelt/F%C3%B6rderprodukte/Erneuerbare-Energien-Standard-(270)/',
+    foerderhoehe: 'Bis zu 50 Mio. Euro pro Vorhaben',
+    zielgruppe: 'Unternehmen, Freiberufler, Privatpersonen',
+    antragsfrist: 'Laufend',
+    foerderart: 'Kredit',
+    ansprechpartner: 'KfW Bankengruppe',
+    region: 'Deutschland',
+    category: 'Energie',
+    applicant_type: 'KMU'
+  },
+  {
+    title: 'Klimafreundlicher Neubau – Nichtwohngebäude (299)',
+    description: 'Förderung für energieeffiziente und nachhaltige Neubauten von Nichtwohngebäuden mit langer Zinsbindung.',
+    url: 'https://www.kfw.de/inlandsfoerderung/Unternehmen/Energie-und-Umwelt/F%C3%B6rderprodukte/Klimafreundlicher-Neubau-Nichtwohngeb%C3%A4ude-(299)/',
+    foerderhoehe: 'Bis zu 30 Jahre Laufzeit, bis zu 10 Jahre Zinsbindung',
+    zielgruppe: 'Unternehmen, öffentliche Einrichtungen, Investoren',
+    antragsfrist: 'Laufend',
+    foerderart: 'Kredit',
+    ansprechpartner: 'KfW Bankengruppe',
+    region: 'Deutschland',
+    category: 'Bauen',
+    applicant_type: 'KMU'
+  },
+  {
+    title: 'Energieeffizienz in der Produktion (292)',
+    description: 'Förderung von Maßnahmen zur Steigerung der Energieeffizienz in Produktionsprozessen zur Senkung der Energiekosten.',
+    url: 'https://www.kfw.de/inlandsfoerderung/Unternehmen/Energie-und-Umwelt/F%C3%B6rderprodukte/Energieeffizienz-in-der-Produktion-(292)/',
+    foerderhoehe: 'Finanzierung für Neuinvestitionen und Modernisierungen',
+    zielgruppe: 'Unternehmen, freiberuflich Tätige',
+    antragsfrist: 'Laufend',
+    foerderart: 'Kredit',
+    ansprechpartner: 'KfW Bankengruppe',
+    region: 'Deutschland',
+    category: 'Energie',
+    applicant_type: 'KMU'
+  },
   {
     title: 'Bundesförderung für effiziente Gebäude – Einzelmaßnahmen (BEG EM)',
     description: 'Förderung von Einzelmaßnahmen zur energetischen Sanierung von Gebäuden. Dämmung, Fenster, Anlagentechnik und Heizungsoptimierung.',
@@ -922,8 +393,32 @@ const programmes = [
     category: 'Digitalisierung',
     applicant_type: 'KMU'
   },
-
-
+  {
+    title: 'go-digital',
+    description: 'Förderung der Digitalisierung von kleinen und mittleren Unternehmen durch autorisierte Beratungsunternehmen.',
+    url: 'https://www.innovation-beratung-foerderung.de/INNO/Navigation/DE/go-digital/go-digital.html',
+    foerderhoehe: 'Bis zu 16.500 Euro (50% Förderung)',
+    zielgruppe: 'KMU mit weniger als 100 Mitarbeitern',
+    antragsfrist: 'Laufend',
+    foerderart: 'Zuschuss',
+    ansprechpartner: 'BMWi/VDI/VDE Innovation + Technik GmbH',
+    region: 'Deutschland',
+    category: 'Digitalisierung',
+    applicant_type: 'KMU'
+  },
+  {
+    title: 'KMU-innovativ',
+    description: 'Förderung von Forschungs- und Entwicklungsvorhaben in verschiedenen Technologiefeldern für kleine und mittlere Unternehmen.',
+    url: 'https://www.bmbf.de/bmbf/de/forschung/innovativer-mittelstand/kmu-innovativ/kmu-innovativ.html',
+    foerderhoehe: 'Bis zu 500.000 Euro pro Vorhaben',
+    zielgruppe: 'KMU, Startups, Hochschulen',
+    antragsfrist: 'Mehrmals jährlich je Technologiefeld',
+    foerderart: 'Zuschuss',
+    ansprechpartner: 'Verschiedene Projektträger',
+    region: 'Deutschland',
+    category: 'Innovation',
+    applicant_type: 'KMU'
+  },
   // MEGA UPDATE: VIELE NEUE PROGRAMME aus verschiedenen Bundesländern
 
   // Baden-Württemberg Programme (L-Bank)
@@ -940,13 +435,49 @@ const programmes = [
     category: 'Digitalisierung',
     applicant_type: 'KMU'
   },
-
-
+  {
+    title: 'Digitalisierungsprämie Plus Darlehensvariante - L-Bank',
+    description: 'Förderung von Digitalisierungsprojekten sowie Maßnahmen zur Verbesserung der IT-Sicherheit in KMU mit Tilgungszuschuss 4%.',
+    url: 'https://www.wirtschaft-digital-bw.de/foerderprogramme/digitalisierungspraemie-plus',
+    foerderhoehe: 'Darlehen 15.000-100.000 €, Tilgungszuschuss 4%',
+    zielgruppe: 'Unternehmen bis 500 Mitarbeiter, Freiberufler',
+    antragsfrist: 'Laufend',
+    foerderart: 'Darlehen mit Tilgungszuschuss',
+    ansprechpartner: 'L-Bank Baden-Württemberg',
+    region: 'Baden-Württemberg',
+    category: 'Digitalisierung',
+    applicant_type: 'KMU'
+  },
+  {
+    title: 'Digitalisierungsprämie Plus Zuschussvariante - L-Bank',
+    description: 'Direkter Zuschuss für kleinere Digitalisierungsprojekte und IT-Sicherheitsmaßnahmen in KMU.',
+    url: 'https://www.wirtschaft-digital-bw.de/foerderprogramme/digitalisierungspraemie-plus',
+    foerderhoehe: '30%, max. 3.000 Euro',
+    zielgruppe: 'Unternehmen bis 500 Mitarbeiter, Freiberufler',
+    antragsfrist: 'Laufend',
+    foerderart: 'Zuschuss',
+    ansprechpartner: 'L-Bank Baden-Württemberg',
+    region: 'Baden-Württemberg',
+    category: 'Digitalisierung',
+    applicant_type: 'KMU'
+  },
 
   // Sachsen Programme (SAB)
 
   // Thüringen Programme (TAB)
-
+  {
+    title: 'FTI-Thüringen TECHNOLOGIE',
+    description: 'Förderung von Technologievorhaben und innovativen Projekten in Thüringen entsprechend der Regionalen Innovationsstrategie.',
+    url: 'https://www.aufbaubank.de/Unternehmen/Innovationen-voranbringen',
+    foerderhoehe: 'Bis zu 80% Förderquote je nach Vorhaben',
+    zielgruppe: 'Verarbeitendes Gewerbe, Handwerk, Forschungseinrichtungen',
+    antragsfrist: 'Laufend',
+    foerderart: 'Zuschuss',
+    ansprechpartner: 'Thüringer Aufbaubank (TAB)',
+    region: 'Thüringen',
+    category: 'Innovation',
+    applicant_type: 'KMU'
+  },
   {
     title: 'Digitalbonus Thüringen',
     description: 'Förderung von Digitalisierungsmaßnahmen und Betriebsmitteln für KMU zur digitalen Transformation.',
@@ -1070,8 +601,32 @@ const programmes = [
   },
 
   // Branchenspezifische Programme
-
-
+  {
+    title: 'Bundesförderung für Energieberatung im Mittelstand',
+    description: 'BAFA-Förderung für qualifizierte Energieberatung in KMU zur Identifizierung von Energieeinsparpotentialen.',
+    url: 'https://www.bafa.de/DE/Energie/Energieberatung/Energieberatung_Mittelstand/energieberatung_mittelstand_node.html',
+    foerderhoehe: 'Bis zu 80% der Beratungskosten, max. 6.000 Euro',
+    zielgruppe: 'KMU mit jährlichen Energiekosten ab 10.000 Euro',
+    antragsfrist: 'Laufend',
+    foerderart: 'Zuschuss',
+    ansprechpartner: 'BAFA',
+    region: 'Deutschland',
+    category: 'Energie',
+    applicant_type: 'KMU'
+  },
+  {
+    title: 'Förderung von Maßnahmen zur Steigerung der Materialeffizienz',
+    description: 'VDI ZRE Förderung für Unternehmen zur Steigerung der Materialeffizienz und Ressourcenschonung in der Produktion.',
+    url: 'https://www.ressource-deutschland.de/foerderung/',
+    foerderhoehe: 'Bis zu 200.000 Euro, 50% Förderquote',
+    zielgruppe: 'Produzierendes Gewerbe, Handwerk',
+    antragsfrist: 'Nach Verfügbarkeit',
+    foerderart: 'Zuschuss',
+    ansprechpartner: 'VDI Zentrum Ressourceneffizienz',
+    region: 'Deutschland',
+    category: 'Umwelt',
+    applicant_type: 'KMU'
+  },
   {
     title: 'Exportinitiative Energie',
     description: 'BMWi-Programm zur Förderung deutscher Unternehmen beim Export von Energietechnologien und -dienstleistungen.',
@@ -1086,13 +641,61 @@ const programmes = [
     applicant_type: 'KMU'
   },
 
-
-
-
-
+  // Weitere KfW-Programme
+  {
+    title: 'KfW-Umweltprogramm',
+    description: 'Förderung von Umwelt- und Klimaschutzmaßnahmen zur Verringerung von Umweltbelastungen in Unternehmen.',
+    url: 'https://www.kfw.de/inlandsfoerderung/Unternehmen/Umwelt-Klima/',
+    foerderhoehe: 'Bis zu 25 Mio. Euro pro Vorhaben',
+    zielgruppe: 'Unternehmen jeder Größe, Freiberufler',
+    antragsfrist: 'Laufend',
+    foerderart: 'Darlehen',
+    ansprechpartner: 'KfW Bankengruppe',
+    region: 'Deutschland',
+    category: 'Umwelt',
+    applicant_type: 'KMU'
+  },
+  {
+    title: 'KfW-Effizienzhaus/Energieeffizienz in der Wirtschaft',
+    description: 'Förderung von Investitionen in hocheffiziente Technologien zur Steigerung der Energieeffizienz in Unternehmen.',
+    url: 'https://www.kfw.de/inlandsfoerderung/Unternehmen/Energie-Umwelt/F%C3%B6rderprodukte/Energieeffizienz-und-Prozessw%C3%A4rme-(295)/',
+    foerderhoehe: 'Bis zu 25 Mio. Euro plus Tilgungszuschuss bis 55%',
+    zielgruppe: 'Unternehmen, Contractoren, Kommunen',
+    antragsfrist: 'Laufend',
+    foerderart: 'Darlehen mit Tilgungszuschuss',
+    ansprechpartner: 'KfW Bankengruppe',
+    region: 'Deutschland',
+    category: 'Energie',
+    applicant_type: 'KMU'
+  },
+  {
+    title: 'KfW-Wachstumsfinanzierung',
+    description: 'Langfristige Finanzierung für wachstumsstarke mittelständische Unternehmen zur Expansion und Investition.',
+    url: 'https://www.kfw.de/inlandsfoerderung/Unternehmen/Wachsen-Nachfolge/',
+    foerderhoehe: 'Bis zu 25 Mio. Euro',
+    zielgruppe: 'Etablierte mittelständische Unternehmen',
+    antragsfrist: 'Laufend',
+    foerderart: 'Darlehen',
+    ansprechpartner: 'KfW Bankengruppe',
+    region: 'Deutschland',
+    category: 'Wachstum',
+    applicant_type: 'KMU'
+  },
 
   // Weitere Startup-Programme
-
+  {
+    title: 'INVEST - Zuschuss für Wagniskapital',
+    description: 'Förderung für Business Angels und Investoren, die in junge innovative Unternehmen investieren.',
+    url: 'https://www.bmwk.de/Redaktion/DE/Artikel/Mittelstand/invest-zuschuss-wagniskapital.html',
+    foerderhoehe: '25% des Investitionsbetrags, bis zu 500.000 Euro',
+    zielgruppe: 'Business Angels, private Investoren',
+    antragsfrist: 'Laufend',
+    foerderart: 'Zuschuss',
+    ansprechpartner: 'BMWK über Bundesländer',
+    region: 'Deutschland',
+    category: 'Gründung',
+    applicant_type: 'Projektträger'
+  },
   {
     title: 'GO-Bio Gründungsoffensive Biotechnologie',
     description: 'BMBF-Förderung für Ausgründungen aus der Biotechnologie-Forschung zur Überführung in die Anwendung.',
@@ -1125,7 +728,19 @@ const programmes = [
   // MEGA UPDATE PART 2: NOCH VIEL MEHR NEUE PROGRAMME aus Hamburg, Schleswig-Holstein, Mecklenburg-Vorpommern, Berlin
 
   // Hamburg Programme (IFB Hamburg)
-
+  {
+    title: 'Hamburg Digital - IFB Hamburg',
+    description: 'Förderung für Digitalisierung von KMU der Hamburger Wirtschaft mit Beratungs- und Investitionsleistungen. Unterstützt bei der Umstellung auf neue digitale Systeme und Geschäftsmodelle.',
+    url: 'https://www.ifbhh.de/foerderprogramm/hamburg-digital',
+    foerderhoehe: 'Bis zu 50% Zuschuss, mind. 3.000 € (netto) je Modul',
+    zielgruppe: 'KMU der gewerblichen Wirtschaft und des Handwerks, freiberuflich Tätige',
+    antragsfrist: 'Laufend (Programm eingestellt bis 15.11.2024)',
+    foerderart: 'Zuschuss',
+    ansprechpartner: 'IFB Hamburg',
+    region: 'Hamburg',
+    category: 'Digitalisierung',
+    applicant_type: 'KMU'
+  },
   {
     title: 'InnoFounder - IFB Innovationsstarter Hamburg',
     description: 'Personenbezogene Zuschüsse für Gründer und Gründungsteams in der Vor- und Gründungsphase. Förderung neuartiger, digitaler Gründungsvorhaben aus dem Medien- und Content-Bereich.',
@@ -1165,7 +780,19 @@ const programmes = [
     category: 'FinTech',
     applicant_type: 'KMU'
   },
-
+  {
+    title: 'PROFI Standard - IFB Hamburg',
+    description: 'Förderung für Forschung und Entwicklung in Unternehmen. Unterstützt innovative Projekte zur Entwicklung neuer Produkte, Verfahren oder Dienstleistungen.',
+    url: 'https://www.ifbhh.de/programme/gruender-and-unternehmen/innovationen-realisieren',
+    foerderhoehe: 'Zuschuss für FuE-Projekte',
+    zielgruppe: 'KMU, Forschungseinrichtungen',
+    antragsfrist: 'Laufend',
+    foerderart: 'Zuschuss',
+    ansprechpartner: 'IFB Hamburg Innovationsagentur',
+    region: 'Hamburg',
+    category: 'Forschung',
+    applicant_type: 'KMU'
+  },
   {
     title: 'Hamburg-Kredit Wachstum',
     description: 'Darlehen für das Wachstum innovativer Unternehmen und Startups. Finanzierung von Markteinführung, Expansion und Digitalisierungsvorhaben.',
@@ -1568,10 +1195,15 @@ window.handleToggleFavorite = handleToggleFavorite;
 const chatEl = document.getElementById('chat');
 const chatForm = document.getElementById('chatForm');
 const queryInput = document.getElementById('query');
-const modelSelect = document.getElementById('modelSelect');
 const resultsEl = document.getElementById('results');
 const regionFilterEl = document.getElementById('regionFilter');
 const categoryFilterEl = document.getElementById('categoryFilter');
+
+// Custom Dropdown elements for 'Förderberechtigte'
+const eligibleDropdownContainer = document.getElementById('eligibleDropdownContainer');
+const eligibleDropdownButton = document.getElementById('eligibleDropdownButton');
+const eligibleDropdownLabel = document.getElementById('eligibleDropdownLabel');
+const eligibleDropdownPanel = document.getElementById('eligibleDropdownPanel');
 
 // Custom Dropdown elements for 'Förderart'
 const fundingTypeDropdownContainer = document.getElementById('fundingTypeDropdownContainer');
@@ -1585,50 +1217,12 @@ const companySizeDropdownButton = document.getElementById('companySizeDropdownBu
 const companySizeDropdownLabel = document.getElementById('companySizeDropdownLabel');
 const companySizeDropdownPanel = document.getElementById('companySizeDropdownPanel');
 
-// Custom Dropdown elements für 'Unternehmensbranche'
-const industryDropdownContainer = document.getElementById('industryDropdownContainer');
-const industryDropdownButton = document.getElementById('industryDropdownButton');
-const industryDropdownLabel = document.getElementById('industryDropdownLabel');
-const industryDropdownPanel = document.getElementById('industryDropdownPanel');
-
-// Filter Apply Button
-const filterApplyButton = document.getElementById('filterApplyButton');
-
 /* ----------  VOICE INPUT (Web Speech API)  ---------- */
 const supportsSpeech = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
 let recognition = null;
 /* ----------  DOCUMENT CONTEXT  ---------- */
 let docContext = '';   // wird gefüllt, wenn der Nutzer eine Datei hochlädt
 let lastUserQueryForFilter = ''; // Speichert die letzte Benutzeranfrage für automatische Filter-Neuanfragen
-let filtersDirty = false; // Wenn true: Filter geändert, aber noch nicht angewendet
-
-function getSelectedModel() {
-  if (modelSelect && modelSelect.value) return modelSelect.value;
-  return 'gpt-5-mini';
-}
-
-function buildFilterOnlyQuery() {
-  const parts = [];
-  if (regionFilterEl && regionFilterEl.value) parts.push(`Region: ${regionFilterEl.value}`);
-  if (categoryFilterEl && categoryFilterEl.value) parts.push(`Förderbereich: ${categoryFilterEl.value}`);
-
-  const getCheckedText = (panel) =>
-    panel ? Array.from(panel.querySelectorAll('input:checked')).map(cb => cb.value) : [];
-
-  const funding = getCheckedText(fundingTypeDropdownPanel);
-  if (funding.length) parts.push(`Förderart: ${funding.join(', ')}`);
-
-  const sizes = getCheckedText(companySizeDropdownPanel);
-  if (sizes.length) parts.push(`Unternehmensgröße: ${sizes.join(', ')}`);
-
-  const industries = getCheckedText(industryDropdownPanel);
-  if (industries.length) parts.push(`Unternehmensbranche: ${industries.join(', ')}`);
-
-  if (parts.length === 0) {
-    return 'Suche passende Förderprogramme.';
-  }
-  return `Suche passende Förderprogramme für: ${parts.join('; ')}.`;
-}
 
 function setupVoiceInput() {
   if (!supportsSpeech) return;
@@ -1638,9 +1232,9 @@ function setupVoiceInput() {
   micBtn.id = 'micBtn';
   micBtn.type = 'button';
   micBtn.title = 'Spracheingabe';
-  micBtn.className = 'mic-button ml-2'; // Custom CSS class
+  micBtn.className = 'ml-2 p-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white focus:outline-none';
   micBtn.innerHTML = `
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
       <path d="M12 14a3 3 0 003-3V5a3 3 0 00-6 0v6a3 3 0 003 3z"/>
       <path d="M19 10v1a7 7 0 01-14 0v-1h-2v1a9 9 0 008 8.94V22h-2v2h6v-2h-2v-2.06A9 9 0 0021 11v-1h-2z"/>
     </svg>`;
@@ -1664,12 +1258,14 @@ function setupVoiceInput() {
 
   recognition.addEventListener('start', () => {
     listening = true;
-    micBtn.classList.add('recording');
+    micBtn.classList.remove('bg-blue-600');
+    micBtn.classList.add('bg-red-600');
   });
 
   recognition.addEventListener('end', () => {
     listening = false;
-    micBtn.classList.remove('recording');
+    micBtn.classList.remove('bg-red-600');
+    micBtn.classList.add('bg-blue-600');
   });
 
   recognition.addEventListener('result', (event) => {
@@ -1693,7 +1289,7 @@ function setupFileUpload() {
   // Label-Button
   const fileLbl = document.createElement('label');
   fileLbl.htmlFor = 'docFile';
-  fileLbl.className = 'ml-2 cursor-pointer hover:underline'; // Removed text-blue-600
+  fileLbl.className = 'ml-2 cursor-pointer text-blue-600 hover:underline';
   fileLbl.textContent = 'Datei hochladen';
   chatForm.insertBefore(fileLbl, chatForm.firstChild.nextSibling);
 
@@ -1734,84 +1330,113 @@ function setupFileUpload() {
 
 function populateRegionFilter() {
   if (!regionFilterEl) return;
-  const staticRegions = [
-    'Bundesweit',
-    'Baden-Württemberg',
-    'Bayern',
-    'Berlin',
-    'Brandenburg',
-    'Bremen',
-    'Niedersachsen',
-    'Sachsen-Anhalt',
-    'Hamburg',
-    'Hessen',
-    'Mecklenburg-Vorpommern',
-    'Nordrhein-Westfalen',
-    'Rheinland-Pfalz',
-    'Saarland',
-    'Sachsen',
-    'Schleswig-Holstein',
-    'Thüringen'
-  ];
-
-  const regionsSet = new Set(staticRegions);
+  const regionsSet = new Set();
   programmes.forEach(p => { if (p.region) regionsSet.add(p.region); });
+  // include favorites data if any
   const favData = getFavoritesData();
   Object.values(favData).forEach(p => { if (p && p.region) regionsSet.add(p.region); });
-
+  // Ensure EU-weit is included if present in any KI entries later
   regionFilterEl.innerHTML = '<option value="">Alle Regionen</option>' +
     Array.from(regionsSet).sort().map(r => `<option>${r}</option>`).join('');
+}
+
+function setupEligibleDropdown() {
+  if (!eligibleDropdownContainer) return;
+
+  const eligibleSet = new Set();
+  const fromImage = [
+    'Bildungseinrichtung', 'Existenzgründer/in', 'Forschungseinrichtung',
+    'Hochschule', 'Kommune', 'Öffentliche Einrichtung',
+    'Privatperson', 'Unternehmen', 'Verband/Vereinigung'
+  ];
+  fromImage.forEach(item => eligibleSet.add(item));
+  programmes.forEach(p => {
+    if (p.zielgruppe) p.zielgruppe.split(',').forEach(zg => eligibleSet.add(zg.trim()));
+  });
+
+  eligibleDropdownPanel.innerHTML = ''; // Clear existing
+  Array.from(eligibleSet).sort().forEach(item => {
+    if (!item) return;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'flex items-center p-2 hover:bg-gray-100 cursor-pointer';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.id = `dd-check-${item.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+    checkbox.value = item;
+    checkbox.className = 'h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer';
+
+    const label = document.createElement('label');
+    label.htmlFor = checkbox.id;
+    label.textContent = item;
+    label.className = 'ml-2 block text-sm text-gray-900 flex-1 cursor-pointer';
+
+    wrapper.appendChild(checkbox);
+    wrapper.appendChild(label);
+    eligibleDropdownPanel.appendChild(wrapper);
+  });
+
+  // Dropdown logic
+  eligibleDropdownButton.addEventListener('click', () => {
+    eligibleDropdownPanel.classList.toggle('hidden');
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!eligibleDropdownContainer.contains(e.target)) {
+      eligibleDropdownPanel.classList.add('hidden');
+    }
+  });
+
+  eligibleDropdownPanel.addEventListener('change', () => {
+    const selected = Array.from(eligibleDropdownPanel.querySelectorAll('input:checked')).map(cb => cb.value);
+    if (selected.length === 0) {
+      eligibleDropdownLabel.textContent = 'Alle auswählen';
+    } else if (selected.length === 1) {
+      eligibleDropdownLabel.textContent = selected[0];
+    } else {
+      eligibleDropdownLabel.textContent = `${selected.length} ausgewählt`;
+    }
+    handleFilterChange(); // Trigger search on change
+  });
 }
 
 function setupFundingTypeDropdown() {
   if (!fundingTypeDropdownContainer) return;
 
   const fundingTypeSet = new Set();
-  const fromImage = ['Darlehen', 'Zuschuss'];
+  const fromImage = ['Beteiligung', 'Bürgschaft', 'Darlehen', 'Garantie', 'Sonstige', 'Zuschuss', 'Kredit', 'Stipendium'];
   fromImage.forEach(item => fundingTypeSet.add(item));
+  programmes.forEach(p => {
+    if (p.foerderart) p.foerderart.split(',').forEach(fa => fundingTypeSet.add(fa.trim()));
+  });
 
   fundingTypeDropdownPanel.innerHTML = ''; // Clear existing
   Array.from(fundingTypeSet).sort().forEach(item => {
     if (!item) return;
     const wrapper = document.createElement('div');
-    // CSS handles styling via .dropdown-panel div
+    wrapper.className = 'flex items-center p-2 hover:bg-gray-100 cursor-pointer';
 
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.id = `ft-check-${item.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
     checkbox.value = item;
-    checkbox.className = 'form-checkbox'; // Custom CSS class
+    checkbox.className = 'h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer';
 
     const label = document.createElement('label');
     label.htmlFor = checkbox.id;
-    label.className = 'ml-3 block text-sm cursor-pointer flex-grow'; // Removed text-gray-700
     label.textContent = item;
+    label.className = 'ml-2 block text-sm text-gray-900 flex-1 cursor-pointer';
 
     wrapper.appendChild(checkbox);
     wrapper.appendChild(label);
-
-    // Make whole row clickable
-    wrapper.addEventListener('click', (e) => {
-      if (e.target !== checkbox && e.target !== label) {
-        checkbox.checked = !checkbox.checked;
-        checkbox.dispatchEvent(new Event('change', { bubbles: true }));
-      }
-    });
-
     fundingTypeDropdownPanel.appendChild(wrapper);
   });
 
-  // Toggle Panel
-  fundingTypeDropdownButton.addEventListener('click', (e) => {
-    e.stopPropagation();
+  // Dropdown logic
+  fundingTypeDropdownButton.addEventListener('click', () => {
     fundingTypeDropdownPanel.classList.toggle('hidden');
-    // Close others
-    eligibleDropdownPanel.classList.add('hidden');
-    companySizeDropdownPanel.classList.add('hidden');
-    if (industryDropdownPanel) industryDropdownPanel.classList.add('hidden');
   });
 
-  // Close when clicking outside
   document.addEventListener('click', (e) => {
     if (!fundingTypeDropdownContainer.contains(e.target)) {
       fundingTypeDropdownPanel.classList.add('hidden');
@@ -1822,15 +1447,12 @@ function setupFundingTypeDropdown() {
     const selected = Array.from(fundingTypeDropdownPanel.querySelectorAll('input:checked')).map(cb => cb.value);
     if (selected.length === 0) {
       fundingTypeDropdownLabel.textContent = 'Alle auswählen';
-      fundingTypeDropdownLabel.classList.remove('font-semibold');
     } else if (selected.length === 1) {
       fundingTypeDropdownLabel.textContent = selected[0];
-      fundingTypeDropdownLabel.classList.add('font-semibold');
     } else {
       fundingTypeDropdownLabel.textContent = `${selected.length} ausgewählt`;
-      fundingTypeDropdownLabel.classList.add('font-semibold');
     }
-    filtersDirty = true;
+    handleFilterChange(); // Trigger search on change
   });
 }
 
@@ -1842,44 +1464,29 @@ function setupCompanySizeDropdown() {
   companySizeDropdownPanel.innerHTML = ''; // Clear existing
   companySizeOptions.forEach(item => {
     const wrapper = document.createElement('div');
-    // CSS handles styling via .dropdown-panel div
+    wrapper.className = 'flex items-center p-2 hover:bg-gray-100 cursor-pointer';
 
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.id = `cs-check-${item.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
     checkbox.value = item;
-    checkbox.className = 'form-checkbox'; // Custom CSS class
+    checkbox.className = 'h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer';
 
     const label = document.createElement('label');
     label.htmlFor = checkbox.id;
-    label.className = 'ml-3 block text-sm cursor-pointer flex-grow'; // Removed text-gray-700
     label.textContent = item;
+    label.className = 'ml-2 block text-sm text-gray-900 flex-1 cursor-pointer';
 
     wrapper.appendChild(checkbox);
     wrapper.appendChild(label);
-
-    // Make whole row clickable
-    wrapper.addEventListener('click', (e) => {
-      if (e.target !== checkbox && e.target !== label) {
-        checkbox.checked = !checkbox.checked;
-        checkbox.dispatchEvent(new Event('change', { bubbles: true }));
-      }
-    });
-
     companySizeDropdownPanel.appendChild(wrapper);
   });
 
-  // Toggle Panel
-  companySizeDropdownButton.addEventListener('click', (e) => {
-    e.stopPropagation();
+  // Dropdown logic
+  companySizeDropdownButton.addEventListener('click', () => {
     companySizeDropdownPanel.classList.toggle('hidden');
-    // Close others
-    eligibleDropdownPanel.classList.add('hidden');
-    fundingTypeDropdownPanel.classList.add('hidden');
-    if (industryDropdownPanel) industryDropdownPanel.classList.add('hidden');
   });
 
-  // Close when clicking outside
   document.addEventListener('click', (e) => {
     if (!companySizeDropdownContainer.contains(e.target)) {
       companySizeDropdownPanel.classList.add('hidden');
@@ -1890,126 +1497,12 @@ function setupCompanySizeDropdown() {
     const selected = Array.from(companySizeDropdownPanel.querySelectorAll('input:checked')).map(cb => cb.value);
     if (selected.length === 0) {
       companySizeDropdownLabel.textContent = 'Alle auswählen';
-      companySizeDropdownLabel.classList.remove('font-semibold');
     } else if (selected.length === 1) {
       companySizeDropdownLabel.textContent = selected[0];
-      companySizeDropdownLabel.classList.add('font-semibold');
     } else {
       companySizeDropdownLabel.textContent = `${selected.length} ausgewählt`;
-      companySizeDropdownLabel.classList.add('font-semibold');
     }
-    filtersDirty = true;
-  });
-}
-
-function setupIndustryDropdown() {
-  if (!industryDropdownContainer) return;
-
-  const industries = [
-    '(CPA A 01) Landwirtschaft und Jagd',
-    '(CPA A 02) Forstwirtschaft und Holzeinschlag',
-    '(CPA A 03) Fischerei und Aquakultur',
-    '(CPA B 07-09) Erzbergbau, Gewinnung von Steinen und Erden, sonstiger Bergbau',
-    '(CPA B 05) Kohlenbergbau',
-    '(CPA B 06) Gewinnung von Erdöl und Erdgas',
-    '(CPA C 10-12) H.v. Nahrungsmitteln und Getränken; Tabakverarb.',
-    '(CPA C 13-15) H.v. Textilien, Bekleidung, Leder und Lederwaren, Schuhen',
-    '(CPA C 16) H.v. Holz-, Flecht-, Korb- und Korkwaren (ohne Möbel)',
-    '(CPA C 17) H.v. Papier, Pappe und Waren daraus',
-    '(CPA C 18) H.v. Druckereierzeugnissen, Vervielf. Von Ton-, Bild-, Datenträgern',
-    '(CPA C 19) Kokerei und Mineralölverarbeitung',
-    '(CPA C 20) H.v. chemischen Erzeugnissen',
-    '(CPA C 21) H.v. pharmazeutischen Erzeugnissen',
-    '(CPA C 22) H.v. Gummi- und Kunststoffwaren',
-    '(CPA C 23.1) H.v. Glas und Glaswaren',
-    '(CPA C 23.2-9) H.v. Keramik, Verarb. Von Steinen und Erden',
-    '(CPA C 25) H.v. Metallerzeugnissen',
-    '(CPA C 26) H.v. DV-Geräten, elektronischen und optischen Erzeugnissen',
-    '(CPA C 27) H.v. elektrischen Ausrüstungen',
-    '(CPA C 28) Maschinenbau',
-    '(CPA C 29) H.v. Kraftwagen und Kraftwagenteilen',
-    '(CPA C 30) Sonstiger Fahrzeugbau',
-    '(CPA C 31-32) H.v. Möbeln und sonstigen Waren',
-    '(CPA C 33) Reparatur und Installation von Maschinen und Ausrüstungen',
-    '(CPA D 35.2) Elektrizitätsversorgung, Wärme- und Kälteversorgung',
-    '(CPA D 35.2) Gasversorgung',
-    '(CPA E 36) Wasserversorgung',
-    '(CPA E 37-39) Abwasser-, Abfallentsorgung, Rückgewinnung',
-    '(CPA F 43) Vorb. Baustellenarbeiten, Bauinstallation, sonstiger',
-    '(CPA G 45) Kfz-Handel; Instandhaltung und Reparatur von Kfz',
-    '(CPA G 46) Großhandel (ohne Handel mit Kfz)',
-    '(CPA G 47) Einzelhandel (ohne Handel mit Kfz)',
-    '(CPA H 50) Schifffahrt',
-    '(CPA H 51) Luftfahrt',
-    '(CPA H 52) Lagerei und sonstige Dienstleistungen für den Verkehr',
-    '(CPA H 53) Post-, Kurier- und Expressdienste',
-    '(CPA I) Gastgewerbe',
-    '(CPA J) Information und Kommunikation',
-    '(CPA K) Finanz- und Versicherungsdienstleistungen',
-    '(CPA L) Grundstücks- und Wohnungswesen',
-    '(CPA M 69-72) Freiberufliche, wissenschaftliche und technische Dienstleistungen',
-    '(CPA M 73-75, N) Sonstige wirtschaftliche Dienstleistungen',
-    '(CPA O) Öffentliche Verwaltung, Verteidigung; Sozialversicherung',
-    '(CPA P) Erziehung und Unterricht',
-    '(CPA Q) Gesundheits- und Sozialwesen',
-    '(CPA R-T) Sonstige Dienstleistungen'
-  ];
-
-  industryDropdownPanel.innerHTML = '';
-  industries.forEach(item => {
-    const wrapper = document.createElement('div');
-
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.id = `ind-check-${item.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
-    checkbox.value = item;
-    checkbox.className = 'form-checkbox';
-
-    const label = document.createElement('label');
-    label.htmlFor = checkbox.id;
-    label.className = 'ml-3 block text-sm cursor-pointer flex-grow';
-    label.textContent = item;
-
-    wrapper.appendChild(checkbox);
-    wrapper.appendChild(label);
-
-    wrapper.addEventListener('click', (e) => {
-      if (e.target !== checkbox && e.target !== label) {
-        checkbox.checked = !checkbox.checked;
-        checkbox.dispatchEvent(new Event('change', { bubbles: true }));
-      }
-    });
-
-    industryDropdownPanel.appendChild(wrapper);
-  });
-
-  industryDropdownButton.addEventListener('click', (e) => {
-    e.stopPropagation();
-    industryDropdownPanel.classList.toggle('hidden');
-    eligibleDropdownPanel.classList.add('hidden');
-    fundingTypeDropdownPanel.classList.add('hidden');
-    companySizeDropdownPanel.classList.add('hidden');
-  });
-
-  document.addEventListener('click', (e) => {
-    if (!industryDropdownContainer.contains(e.target)) {
-      industryDropdownPanel.classList.add('hidden');
-    }
-  });
-
-  industryDropdownPanel.addEventListener('change', () => {
-    const selected = Array.from(industryDropdownPanel.querySelectorAll('input:checked')).map(cb => cb.value);
-    if (selected.length === 0) {
-      industryDropdownLabel.textContent = 'Alle auswählen';
-      industryDropdownLabel.classList.remove('font-semibold');
-    } else if (selected.length === 1) {
-      industryDropdownLabel.textContent = selected[0];
-      industryDropdownLabel.classList.add('font-semibold');
-    } else {
-      industryDropdownLabel.textContent = `${selected.length} ausgewählt`;
-      industryDropdownLabel.classList.add('font-semibold');
-    }
-    filtersDirty = true;
+    handleFilterChange(); // Trigger search on change
   });
 }
 
@@ -2017,26 +1510,9 @@ document.addEventListener('DOMContentLoaded', () => {
   setupVoiceInput();
   setupFileUpload();
   setupFavoriteStyles();
+  setupEligibleDropdown();
   setupFundingTypeDropdown();
   setupCompanySizeDropdown();
-  setupIndustryDropdown();
-
-  addMessage('<span class="text-blue-300 text-sm">Guten Tag, Andreas. Ich suche passende Förderprogramme für dich.</span>', 'system');
-
-  if (filterApplyButton) {
-    filterApplyButton.addEventListener('click', () => {
-      if (!lastUserQueryForFilter && queryInput && queryInput.value.trim()) {
-        lastUserQueryForFilter = queryInput.value.trim();
-      }
-      if (!lastUserQueryForFilter) {
-        // kein Text vom User – baue eine Filter-basierte Anfrage
-        lastUserQueryForFilter = buildFilterOnlyQuery();
-        addMessage('<span class="text-blue-400">Suche wird mit den ausgewählten Filtern gestartet.</span>', 'system');
-      }
-      filtersDirty = false;
-      askOpenAIChat(lastUserQueryForFilter);
-    });
-  }
 
   // Event Listener für Filteränderungen hinzufügen
   if (regionFilterEl) {
@@ -2058,60 +1534,45 @@ document.addEventListener('DOMContentLoaded', () => {
   const filterToggle = document.getElementById('filterToggle');
   const filterSection = document.querySelector('.filter-section');
   const filterContent = document.getElementById('filterContent');
-
-  const updateAriaExpanded = (isExpanded) => {
-    if (!filterToggle) return;
-    filterToggle.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
-  };
-
   if (filterToggle && filterSection && filterContent) {
-    const expandFilters = () => {
-      filterSection.classList.remove('collapsed');
-      filterContent.style.overflow = 'hidden';
-      filterContent.style.opacity = '1';
-      filterContent.style.maxHeight = filterContent.scrollHeight + 'px';
-
-      const handleTransitionEnd = (event) => {
-        if (event.target !== filterContent || event.propertyName !== 'max-height') return;
-        filterContent.style.maxHeight = 'none';
-        filterContent.style.overflow = 'visible';
-        filterContent.removeEventListener('transitionend', handleTransitionEnd);
-      };
-
-      filterContent.addEventListener('transitionend', handleTransitionEnd);
-      updateAriaExpanded(true);
-    };
-
-    const collapseFilters = () => {
-      filterContent.style.overflow = 'hidden';
-      filterContent.style.maxHeight = filterContent.scrollHeight + 'px';
-      requestAnimationFrame(() => {
-        filterSection.classList.add('collapsed');
-        filterContent.style.opacity = '0';
-        filterContent.style.maxHeight = '0px';
-      });
-      updateAriaExpanded(false);
-    };
-
-    const toggleFilters = () => {
+    filterToggle.addEventListener('click', () => {
+      // If currently collapsed, expand
       if (filterSection.classList.contains('collapsed')) {
-        expandFilters();
+        filterSection.classList.remove('collapsed');
+        filterSection.classList.add('collapsing');
+        // Set height to 0, then to scrollHeight to trigger transition
+        filterContent.style.height = '0px';
+        filterContent.style.opacity = '0';
+        // Force reflow
+        void filterContent.offsetHeight;
+        filterContent.style.height = filterContent.scrollHeight + 'px';
+        filterContent.style.opacity = '1';
+        // After transition, cleanup
+        filterContent.addEventListener('transitionend', function handler(e) {
+          if (e.propertyName === 'height') {
+            filterContent.style.height = '';
+            filterSection.classList.remove('collapsing');
+            filterContent.removeEventListener('transitionend', handler);
+          }
+        });
       } else {
-        collapseFilters();
-      }
-    };
-
-    filterToggle.setAttribute('role', 'button');
-    filterToggle.setAttribute('tabindex', '0');
-    updateAriaExpanded(true);
-    filterContent.style.maxHeight = filterContent.scrollHeight + 'px';
-    filterContent.style.overflow = 'visible';
-
-    filterToggle.addEventListener('click', toggleFilters);
-    filterToggle.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        toggleFilters();
+        // Collapse
+        filterSection.classList.add('collapsing');
+        // Set height to current, then to 0
+        filterContent.style.height = filterContent.scrollHeight + 'px';
+        filterContent.style.opacity = '1';
+        // Force reflow
+        void filterContent.offsetHeight;
+        filterContent.style.height = '0px';
+        filterContent.style.opacity = '0';
+        filterContent.addEventListener('transitionend', function handler(e) {
+          if (e.propertyName === 'height') {
+            filterSection.classList.add('collapsed');
+            filterSection.classList.remove('collapsing');
+            filterContent.style.height = '';
+            filterContent.removeEventListener('transitionend', handler);
+          }
+        });
       }
     });
   }
@@ -2119,7 +1580,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function addMessage(content, sender = 'user') {
   const msg = document.createElement('div');
-  msg.className = `mb-2 max-w-2xl ${sender === 'user' ? 'self-end chat-bubble-user' : sender === 'system' ? 'self-center system-message' : 'self-start chat-bubble-ai'}`;
+  msg.className = `rounded-lg p-3 mb-2 max-w-2xl ${sender === 'user' ? 'self-end chat-bubble-user' : sender === 'system' ? 'self-center system-message' : 'self-start chat-bubble-ai'}`;
   msg.innerHTML = content;
   chatEl.appendChild(msg);
   chatEl.scrollTop = chatEl.scrollHeight;
@@ -2157,57 +1618,30 @@ function renderProgrammeList(list) {
     const isProgFavorite = favoriteProgramIds.includes(id);
     const heartIconPath = `<path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />`;
 
-    // Status Badge Logic
-    let statusBadge = '';
-    if (p.isWebResult) {
-      statusBadge = `<span class="status-badge status-badge--web">
-        <span class="status-badge__dot" aria-hidden="true"></span>
-        Neu (Web 12/2025)
-      </span>`;
-    } else if (isActiveProgram(p)) {
-      statusBadge = `<span class="status-badge status-badge--active">
-        <span class="status-badge__dot" aria-hidden="true"></span>
-        Aktiv
-      </span>`;
-    } else {
-      statusBadge = `<span class="status-badge status-badge--inactive">
-        <span class="status-badge__dot" aria-hidden="true"></span>
-        Beendet
-      </span>`;
-    }
-
     return `
-    <article class="programme-card relative" data-antragsfrist="${p.antragsfrist || ''}">
-      <div class="flex justify-between items-start mb-2">
-        ${statusBadge}
-        <button 
-          title="Zu Favoriten hinzufügen/entfernen"
-          class="heart-icon p-2 rounded-full hover:bg-white/10 focus:outline-none text-gray-500 ${isProgFavorite ? 'text-red-500' : ''}"
-          data-program-id="${id}">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${isProgFavorite ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.5" class="w-6 h-6">
-            ${heartIconPath}
-          </svg>
-        </button>
-      </div>
-      
-      <h3>${p.title}</h3>
-      <p>${p.description || ''}</p>
-      
-      <div class="meta">
-        ${p.foerderhoehe ? `<div><strong>Förderhöhe:</strong> ${p.foerderhoehe}</div>` : ''}
-        ${p.zielgruppe ? `<div><strong>Zielgruppe:</strong> ${p.zielgruppe}</div>` : ''}
-        ${p.region ? `<div><strong>Region:</strong> ${p.region}</div>` : ''}
-        ${p.antragsfrist ? `<div><strong>Frist:</strong> ${p.antragsfrist}</div>` : ''}
-      </div>
-      
-      ${p.why ? `<div class="mt-3 p-3 bg-blue-900/20 text-blue-200 text-sm rounded border border-blue-800"><strong>💡 Warum passend:</strong> ${p.why}</div>` : ''}
-      
-      <div class="text-right mt-4">
-        <a class="inline-flex items-center text-blue-400 font-semibold hover:text-blue-300 transition-colors" href="${p.url}" target="_blank" rel="noopener">
-          Zum Programm
-          <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-        </a>
-      </div>
+    <article class="programme-card bg-white p-4 mb-2 relative" data-antragsfrist="${p.antragsfrist || ''}">
+      <button 
+        title="Zu Favoriten hinzufügen/entfernen"
+        class="heart-icon absolute top-3 right-3 p-2 rounded-full hover:bg-red-100 focus:outline-none ${isProgFavorite ? 'favorited' : ''}"
+        data-program-id="${id}">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="1.5" class="w-6 h-6">
+          ${heartIconPath}
+        </svg>
+      </button>
+      <h2 class="text-lg font-semibold text-blue-800 mb-1 pr-10">
+        ${p.title}
+      </h2>
+      <p class="text-sm text-gray-500 mb-2">${p.description || ''}</p>
+      <ul class="text-sm mb-2 text-gray-700">
+        ${p.foerderhoehe ? `<li><strong>Förderhöhe:</strong> ${p.foerderhoehe}</li>` : ''}
+        ${p.zielgruppe ? `<li><strong>Zielgruppe:</strong> ${p.zielgruppe}</li>` : ''}
+        ${p.region ? `<li><strong>Region:</strong> ${p.region}</li>` : ''}
+        ${p.antragsfrist ? `<li><strong>Antragsfrist:</strong> ${p.antragsfrist}</li>` : ''}
+        ${p.foerderart ? `<li><strong>Förderart:</strong> ${p.foerderart}</li>` : ''}
+        ${p.ansprechpartner ? `<li><strong>Ansprechpartner:</strong> ${p.ansprechpartner}</li>` : ''}
+        ${p.category ? `<li><strong>Kategorie:</strong> ${p.category}</li>` : ''}
+      </ul>
+      <a class="inline-block mt-2 text-blue-600 font-semibold hover:underline" href="${p.url}" target="_blank" rel="noopener">Mehr Infos & Antrag</a>
     </article>
   `;
   }).join('');
@@ -2318,33 +1752,30 @@ async function askOpenAIChat(userMsg) {
   try {
     const selectedRegion = regionFilterEl.value;
     const selectedCategory = categoryFilterEl.value;
+    const selectedEligible = eligibleDropdownPanel ?
+      Array.from(eligibleDropdownPanel.querySelectorAll('input:checked')).map(cb => cb.value) :
+      [];
     const selectedFundingTypes = fundingTypeDropdownPanel ?
       Array.from(fundingTypeDropdownPanel.querySelectorAll('input:checked')).map(cb => cb.value) :
       [];
     const selectedCompanySizes = companySizeDropdownPanel ?
       Array.from(companySizeDropdownPanel.querySelectorAll('input:checked')).map(cb => cb.value) :
       [];
-    const selectedIndustries = industryDropdownPanel ?
-      Array.from(industryDropdownPanel.querySelectorAll('input:checked')).map(cb => cb.value) :
-      [];
 
     let filterContext = '';
     const filters = [];
     if (selectedRegion) filters.push(`Region: ${selectedRegion}`);
-    if (selectedCategory) filters.push(`Förderbereich: ${selectedCategory}`);
+    if (selectedCategory) filters.push(`Kategorie: ${selectedCategory}`);
+    if (selectedEligible.length > 0) filters.push(`Förderberechtigte: ${selectedEligible.join(', ')}`);
     if (selectedFundingTypes.length > 0) filters.push(`Förderart: ${selectedFundingTypes.join(', ')}`);
     if (selectedCompanySizes.length > 0) filters.push(`Unternehmensgröße: ${selectedCompanySizes.join(', ')}`);
-    if (selectedIndustries.length > 0) filters.push(`Unternehmensbranche: ${selectedIndustries.join(', ')}`);
 
     if (filters.length > 0) {
       filterContext = `Berücksichtige folgende explizite Filtervorgaben: ${filters.join('; ')}\n\n`;
     }
 
     // Serialize local programmes for context (simplified to save tokens)
-    // IMPORTANT: Filter out inactive programs here too!
-    const activeProgrammes = programmes.filter(p => isActiveProgram(p));
-
-    const localProgrammesContext = activeProgrammes.map(p =>
+    const localProgrammesContext = programmes.map(p =>
       `- ${p.title}: ${p.description} (Region: ${p.region}, Kategorie: ${p.category})`
     ).join('\n');
 
@@ -2370,8 +1801,6 @@ async function askOpenAIChat(userMsg) {
     ${localProgrammesContext}
     
     Basierend auf der folgenden Firmenbeschreibung/Webseiten-Kontext (falls vorhanden) und der aktuellen Nutzeranfrage, identifiziere ALLE passenden Förderprogramme.
-    
-    WICHTIG: Sortiere die Ergebnisse streng nach Relevanz zur Suchanfrage. Das Programm, das am besten zur Anfrage passt, MUSS als erstes im Array stehen.
     
     ${docContext ? `Firmenbeschreibung/Webseiten-Kontext:\n${docContext}\n\n` : ''}Aktuelle Nutzeranfrage: "${userMsg}"
     
@@ -2410,7 +1839,7 @@ async function askOpenAIChat(userMsg) {
       method: 'POST',
       headers: headers,
       body: JSON.stringify({
-        model: getSelectedModel(),
+        model: 'o1',
         messages: [
           { role: 'user', content: systemPrompt + '\n\n' + userQueryPrompt }
         ]
@@ -2461,7 +1890,7 @@ async function askOpenAIChat(userMsg) {
           const existingTitles = new Set(validPrograms.map(p => p.title));
 
           // Use Fuse.js for smart search on remaining programs
-          const remainingPrograms = programmes.filter(p => !existingTitles.has(p.title) && isActiveProgram(p));
+          const remainingPrograms = programmes.filter(p => !existingTitles.has(p.title));
           const fuseSearch = new Fuse(remainingPrograms, {
             keys: ['title', 'description', 'category', 'zielgruppe'],
             includeScore: true,
@@ -2521,9 +1950,27 @@ function renderResults(list, source = 'local') {
     resultsEl.innerHTML = '<p class="text-red-600">Kein passendes Förderprogramm gefunden.</p>';
     return;
   }
-  // Use the shared renderProgrammeList function to generate HTML
-  // But since renderProgrammeList returns a string, we need to set innerHTML
-  resultsEl.innerHTML = renderProgrammeList(list);
+  list.forEach(p => {
+    const card = document.createElement('article');
+    card.className = 'bg-white p-4 rounded shadow';
+    card.innerHTML = `
+      <h2 class="text-xl font-semibold">${p.title}</h2>
+      <p class="text-sm text-gray-500 mb-2">${p.description || ''}</p>
+      <ul class="text-sm mb-2">
+        ${p.foerderhoehe ? `<li><strong>Förderhöhe:</strong> ${p.foerderhoehe}</li>` : ''}
+        ${p.zielgruppe ? `<li><strong>Zielgruppe:</strong> ${p.zielgruppe}</li>` : ''}
+        ${p.region ? `<li><strong>Region:</strong> ${p.region}</li>` : ''}
+        ${p.antragsfrist ? `<li><strong>Antragsfrist:</strong> ${p.antragsfrist}</li>` : ''}
+        ${p.foerderart ? `<li><strong>Förderart:</strong> ${p.foerderart}</li>` : ''}
+        ${p.ansprechpartner ? `<li><strong>Ansprechpartner:</strong> ${p.ansprechpartner}</li>` : ''}
+        ${p.category ? `<li><strong>Kategorie:</strong> ${p.category}</li>` : ''}
+      </ul>
+      ${p.why ? `<p class="italic text-gray-600 mb-2">${p.why}</p>` : ''}
+      <a class="inline-block mt-2 text-blue-600 hover:underline" href="${p.url}" target="_blank" rel="noopener">Mehr Infos & Antrag</a>
+      ${source === 'ai' ? '<span class="block mt-2 text-xs text-green-600">(KI-Empfehlung)</span>' : ''}
+    `;
+    resultsEl.appendChild(card);
+  });
 }
 
 function setLoading(isLoading) {
@@ -2532,44 +1979,12 @@ function setLoading(isLoading) {
   }
 }
 
-/* ---------- HELPER: Check if program is active ---------- */
-function isActiveProgram(p) {
-  if (!p.antragsfrist) return true; // No deadline = assume active (or unknown)
-
-  const lowerFrist = p.antragsfrist.toLowerCase();
-
-  // Explicit negative keywords
-  if (lowerFrist.includes('abgelaufen') ||
-    lowerFrist.includes('beendet') ||
-    lowerFrist.includes('archiv') ||
-    lowerFrist.includes('nicht mehr')) {
-    return false;
-  }
-
-  // Date parsing (DD.MM.YYYY)
-  const dateMatch = p.antragsfrist.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
-  if (dateMatch) {
-    const day = parseInt(dateMatch[1]);
-    const month = parseInt(dateMatch[2]) - 1;
-    const year = parseInt(dateMatch[3]);
-    const deadline = new Date(year, month, day);
-    const now = new Date();
-
-    // Set deadline to end of day to be generous
-    deadline.setHours(23, 59, 59, 999);
-
-    // If deadline was yesterday or earlier -> inactive
-    if (deadline < now) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
 function applyFilters(list) {
   const region = regionFilterEl.value;
   const category = categoryFilterEl.value;
+  const selectedEligible = eligibleDropdownPanel ?
+    Array.from(eligibleDropdownPanel.querySelectorAll('input:checked')).map(cb => cb.value) :
+    [];
   const selectedFundingTypes = fundingTypeDropdownPanel ?
     Array.from(fundingTypeDropdownPanel.querySelectorAll('input:checked')).map(cb => cb.value) :
     [];
@@ -2580,6 +1995,7 @@ function applyFilters(list) {
   return list.filter(p => {
     const matchesRegion = !region || (p.region ? p.region.includes(region) : new RegExp(region, 'i').test(p.title + p.description));
     const matchesCategory = !category || (p.category ? p.category.includes(category) : new RegExp(category, 'i').test(p.title + p.description));
+    const matchesEligible = selectedEligible.length === 0 || (p.zielgruppe && selectedEligible.some(eligible => p.zielgruppe.includes(eligible)));
     const matchesFundingType = selectedFundingTypes.length === 0 || (p.foerderart && selectedFundingTypes.some(type => p.foerderart.includes(type)));
 
     // Simple text search for company size in 'zielgruppe' as a fallback
@@ -2594,10 +2010,7 @@ function applyFilters(list) {
       return p.zielgruppe.includes(size);
     }));
 
-    // STRICT ACTIVE FILTER
-    const isActive = isActiveProgram(p);
-
-    return matchesRegion && matchesCategory && matchesFundingType && matchesCompanySize && isActive;
+    return matchesRegion && matchesCategory && matchesEligible && matchesFundingType && matchesCompanySize;
   });
 }
 
@@ -2622,7 +2035,7 @@ async function searchWeb(query) {
         url: item.link,
         foerderhoehe: 'Siehe Website',
         zielgruppe: 'Unbekannt',
-        antragsfrist: 'Unbekannt', // Web results are checked by AI context usually
+        antragsfrist: 'Unbekannt',
         foerderart: 'Unbekannt',
         ansprechpartner: 'Siehe Website',
         region: 'Unbekannt',
@@ -2647,25 +2060,27 @@ async function search() {
   }
   setLoading(true);
   try {
-    // 1. Web Search (ALWAYS)
+    // 1. Local Search
+    let localMatches = filteredList.length ? filteredList : programmes;
+    if (q) {
+      // Fuse search might return { item, score, ... } or just item depending on config.
+      // The original code used fuse.search(q).map(r => r.item)
+      if (fuse) {
+        localMatches = fuse.search(q).map(r => r.item);
+      }
+    }
+
+    // 2. Web Search (only if query exists)
     let webResults = [];
     if (q) {
-      addMessage('Suche live im Web nach aktuellen Programmen...', 'system');
+      // Notify user we are searching web
+      addMessage('Suche im Web nach aktuellen Programmen...', 'system');
       webResults = await searchWeb(q);
-    } else {
-      resultsEl.innerHTML = '<p class="text-gray-600">Bitte Suchbegriff eingeben für Live-Suche.</p>';
-      setLoading(false);
-      return;
     }
 
-    // 2. Use ONLY Web Results
-    const combinedResults = [...webResults];
-
-    if (combinedResults.length === 0) {
-      addMessage('Keine aktuellen Ergebnisse im Web gefunden.', 'system');
-      setLoading(false);
-      return;
-    }
+    // 3. Combine Results
+    // Prioritize local matches, then web results
+    const combinedResults = [...localMatches, ...webResults];
 
     // Deduplicate by URL
     const uniqueResults = [];
@@ -2702,7 +2117,7 @@ Gib die Antwort im JSON-Format zurück (Array von Objekten mit title, descriptio
       method: 'POST',
       headers: headers,
       body: JSON.stringify({
-        model: getSelectedModel(),
+        model: 'gpt-4o',
         messages: [
           { role: 'system', content: 'Du bist ein Förderprogramm-Experte. Antworte immer im JSON-Format (Array von Programmen).' },
           { role: 'user', content: prompt }
@@ -2710,11 +2125,6 @@ Gib die Antwort im JSON-Format zurück (Array von Objekten mit title, descriptio
         temperature: 0.2
       })
     });
-
-    if (res.status === 429) {
-      throw new Error('Zu viele Anfragen (429). Bitte überprüfe dein OpenAI-Guthaben oder warte kurz.');
-    }
-
     const data = await res.json();
     let content = data.choices?.[0]?.message?.content || '';
     content = content.replace(/```json|```/g, '').trim();
@@ -2748,32 +2158,30 @@ Gib die Antwort im JSON-Format zurück (Array von Objekten mit title, descriptio
         console.warn('Parsing‑Fehler search → RAW:', content);
         throw new Error('Keine gültige JSON‑Antwort');
       }
-
-      // FINAL FILTER on AI results (just in case)
-      const finalResults = arr.filter(p => isActiveProgram(p));
-
-      renderResults(finalResults, 'ai');
+      renderResults(arr, 'ai');
     } catch (e) {
-      addMessage('<span class="text-red-600">KI-Antwort konnte nicht interpretiert werden.<br><br><b>Rohantwort:</b><br>' + content.replace(/</g, '&lt;'), 'ai');
+      console.warn('AI parsing failed, falling back to raw results:', e);
+      // Fallback: Show the raw results (Web + Local) without AI summary
+      renderResults(contextResults, 'local');
+      addMessage('<span class="text-orange-600">Hinweis: Der KI-Dienst ist gerade überlastet (429). Ich zeige dir die direkten Suchergebnisse an.</span>', 'system');
     }
   } catch (err) {
-    let errorMsg = err.message;
-    if (errorMsg.includes('429')) {
-      errorMsg = '⚠️ OpenAI-Limit erreicht (429). Bitte Guthaben prüfen.';
-    }
-    resultsEl.innerHTML = `<p class="text-orange-600">KI nicht verfügbar (${errorMsg}). Zeige lokale Ergebnisse:</p>`;
-    // Fallback to local only
+    console.error('Search error:', err);
+    resultsEl.innerHTML = `<p class="text-orange-600">Fehler bei der Verarbeitung. Zeige lokale Ergebnisse.</p>`;
+    // Fallback to local only as a last resort
     const matches = q ? fuse.search(q).map(r => r.item) : filteredList;
-    // Filter matches for active programs
-    const activeMatches = matches.filter(p => isActiveProgram(p));
-    const limited = activeMatches.slice(0, 10);
+    const limited = matches.slice(0, 10);
     renderResults(limited, 'local');
   }
 }
 
 // Funktion, die bei Filteränderung aufgerufen wird
 function handleFilterChange() {
-  filtersDirty = true;
+  if (lastUserQueryForFilter) {
+    // Optional: eine Nachricht hinzufügen, dass eine neue Suche aufgrund von Filteränderung gestartet wird.
+    // addMessage('Filtereinstellungen geändert. Führe die letzte Anfrage erneut aus...', 'ai');
+    askOpenAIChat(lastUserQueryForFilter);
+  }
 }
 
 // EVENT DELEGATION for heart-icon clicks
@@ -2895,9 +2303,7 @@ function loadChat(id) {
   if (!chat) return;
   currentChatId = id;
   chatEl.innerHTML = '';
-  // Beim Laden nur anzeigen, nicht erneut speichern,
-  // sonst würden Nachrichten bei jedem Öffnen dupliziert
-  chat.messages.forEach(m => origAddMessage(m.content, m.sender));
+  chat.messages.forEach(m => addMessage(m.content, m.sender));
   if (!skipRender) {
     renderChatList();
   } else {
@@ -2919,10 +2325,6 @@ function renderChatList() {
   listEl.innerHTML = chats.map(c => `
     <li data-chat-id="${c.id}" class="${c.id === currentChatId ? 'active' : ''}">
       <a href="#" class="chat-item ${c.id === currentChatId ? 'active' : ''}" data-chat-id="${c.id}">${c.title || 'Untitled'}</a>
-      <span class="chat-actions">
-        <button type="button" data-action="load" data-chat-id="${c.id}" title="Öffnen">↩</button>
-        <button type="button" data-action="delete" data-chat-id="${c.id}" title="Löschen">✕</button>
-      </span>
     </li>`).join('');
 }
 // delegate click on chat items
@@ -2930,31 +2332,12 @@ if (typeof window !== 'undefined') {
   // Gemeinsame Handler-Funktion, um Element mit data-chat-id zu ermitteln
   const getChatElement = (evt) => evt.target.closest('[data-chat-id]');
 
-  // Einzel-Klick: Chat laden oder löschen
+  // Einzel-Klick: Chat laden
   window.addEventListener('click', e => {
     const elem = getChatElement(e);
-    const actionBtn = e.target.closest('[data-action][data-chat-id]');
-
-    if (actionBtn) {
-      const chatId = actionBtn.getAttribute('data-chat-id');
-      const action = actionBtn.getAttribute('data-action');
-      e.preventDefault();
-      if (action === 'delete') {
-        deleteChat(chatId);
-        // Wenn der aktive Chat gelöscht wurde, UI leeren
-        if (currentChatId === chatId) {
-          currentChatId = null;
-          chatEl.innerHTML = '';
-        }
-        renderChatList();
-      } else if (action === 'load') {
-        loadChat(chatId, true);
-      }
-      return;
-    }
-
     if (elem) {
       e.preventDefault();
+      // Load chat but keep list intact to allow potential double-click rename
       loadChat(elem.getAttribute('data-chat-id'), true);
       return;
     }
@@ -2999,18 +2382,6 @@ function renameChat(id, title) {
   chat.title = title;
   saveChats(chats);
   renderChatList();
-}
-
-function deleteChat(id) {
-  const chats = getChats();
-  const idx = chats.findIndex(c => c.id === id);
-  if (idx === -1) return;
-  chats.splice(idx, 1);
-  saveChats(chats);
-  // falls kein aktiver Chat mehr: leeren
-  if (currentChatId === id) {
-    currentChatId = null;
-  }
 }
 
 // +++ NEU: Limits & Hilfsfunktionen +++

@@ -17,9 +17,9 @@ export default {
 
     // Nur POST requests erlauben
     if (request.method !== 'POST') {
-      return new Response('Method not allowed', { 
+      return new Response('Method not allowed', {
         status: 405,
-        headers: corsHeaders 
+        headers: corsHeaders
       });
     }
 
@@ -27,12 +27,36 @@ export default {
       // Request body lesen
       const body = await request.json();
 
-      // OpenAI API aufrufen
+      // Check if this is a search request
+      if (body.type === 'search') {
+        const query = body.query;
+        const apiKey = env.GOOGLE_API_KEY;
+        const cx = env.GOOGLE_CX;
+
+        if (!apiKey || !cx) {
+          return new Response(JSON.stringify({
+            error: 'Search API not configured. Please add GOOGLE_API_KEY and GOOGLE_CX to Cloudflare environment variables.'
+          }), {
+            status: 503,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cx}&q=${encodeURIComponent(query)}`;
+        const searchResponse = await fetch(searchUrl);
+        const searchData = await searchResponse.json();
+
+        return new Response(JSON.stringify(searchData), {
+          status: searchResponse.status,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Default: OpenAI API call
       const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // WICHTIG: Hier kommt dein API-Schlüssel hin (wird in Cloudflare Environment Variables gespeichert)
           'Authorization': `Bearer ${env.OPENAI_API_KEY}`
         },
         body: JSON.stringify(body)
@@ -40,7 +64,6 @@ export default {
 
       const data = await openaiResponse.json();
 
-      // Response mit CORS headers zurückgeben
       return new Response(JSON.stringify(data), {
         status: openaiResponse.status,
         headers: {

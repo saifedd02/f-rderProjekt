@@ -515,36 +515,50 @@ function renderFavoritePrograms() {
   }
 
   favoriteProgramObjects.forEach(p => {
-    const isProgFavorite = true; // Always true on this page for initial render
-    const heartSVG = `<path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />`; // Filled heart
+    const metaItems = [
+      { label: 'Förderhöhe', value: p.foerderhoehe },
+      { label: 'Zielgruppe', value: p.zielgruppe },
+      { label: 'Region', value: p.region },
+      { label: 'Antragsfrist', value: p.antragsfrist },
+      { label: 'Förderart', value: p.foerderart },
+      { label: 'Ansprechpartner', value: p.ansprechpartner },
+      { label: 'Kategorie', value: p.category }
+    ].filter(item => !!item.value);
+
+    const eyebrow = p.region || p.category || '';
+    const heartSVG = `<path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />`;
 
     const card = document.createElement('article');
-    card.className = 'programme-card'; // Uses styles from favorites.html (copied from index.html)
+    card.className = 'programme-card favorite-card';
     card.innerHTML = `
-        <button 
-          title="Von Favoriten entfernen"
-          class="heart-icon favorited" 
-          onclick="removeFromFavoritesAndRefresh('${p.customId}')">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-red-500">
+      <div class="favorite-card__header">
+        <div>
+          ${eyebrow ? `<p class="favorite-card__eyebrow">${eyebrow}</p>` : ''}
+          <h3>
+            ${p.title}
+            ${p.applicant_type === 'Projektträger' ? '<span class="favorite-card__chip">Für Mpool</span>' : ''}
+          </h3>
+        </div>
+        <button type="button" class="heart-icon favorited" data-program-id="${p.customId}" aria-label="Von Favoriten entfernen">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5">
             ${heartSVG}
           </svg>
         </button>
-        <h2 class="text-lg font-semibold text-blue-800 mb-1 pr-10">
-          ${p.title}
-          ${p.applicant_type === 'Projektträger' ? '<span class="ml-2 px-2 py-0.5 text-xs bg-indigo-100 text-indigo-800 rounded-full font-medium">Für Mpool</span>' : ''}
-        </h2>
-        <p class="text-sm text-gray-500 mb-2">${p.description || ''}</p>
-        <ul class="text-sm mb-2 text-gray-700">
-          ${p.foerderhoehe ? `<li><strong>Förderhöhe:</strong> ${p.foerderhoehe}</li>` : ''}
-          ${p.zielgruppe ? `<li><strong>Zielgruppe:</strong> ${p.zielgruppe}</li>` : ''}
-          ${p.region ? `<li><strong>Region:</strong> ${p.region}</li>` : ''}
-          ${p.antragsfrist ? `<li><strong>Antragsfrist:</strong> ${p.antragsfrist}</li>` : ''}
-          ${p.foerderart ? `<li><strong>Förderart:</strong> ${p.foerderart}</li>` : ''}
-          ${p.ansprechpartner ? `<li><strong>Ansprechpartner:</strong> ${p.ansprechpartner}</li>` : ''}
-          ${p.category ? `<li><strong>Kategorie:</strong> ${p.category}</li>` : ''}
-        </ul>
-        <a class="inline-block mt-2 text-blue-600 font-semibold hover:underline" href="${p.url}" target="_blank" rel="noopener">Mehr Infos & Antrag</a>
+      </div>
+      ${p.description ? `<p class="favorite-card__description">${p.description}</p>` : ''}
+      ${metaItems.length ? `<ul class="favorite-card__list">
+        ${metaItems.map(item => `<li><strong>${item.label}:</strong> <span>${item.value}</span></li>`).join('')}
+      </ul>` : ''}
+      <a class="favorite-card__link" href="${p.url}" target="_blank" rel="noopener">
+        Mehr Infos & Antrag
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6" />
+        </svg>
+      </a>
     `;
+
+    const removeBtn = card.querySelector('.heart-icon');
+    removeBtn.addEventListener('click', () => removeFromFavoritesAndRefresh(p.customId));
     resultsEl.appendChild(card);
   });
 }
