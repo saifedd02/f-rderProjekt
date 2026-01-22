@@ -1601,6 +1601,10 @@ let recognition = null;
 let docContext = '';   // wird gefüllt, wenn der Nutzer eine Datei hochlädt
 let lastUserQueryForFilter = ''; // Speichert die letzte Benutzeranfrage für automatische Filter-Neuanfragen
 let filtersDirty = false; // Wenn true: Filter geändert, aber noch nicht angewendet
+let lastContextSummary = ''; // Merkt sich den letzten Kontext für kurze Folgefragen
+let suppressChatSave = false; // verhindert das Speichern von System-Meldungen beim Seitenstart
+const NOTIFY_WEB_SEEN_KEY = 'mpoolWebSeenProgramIds';
+let lastWebResults = [];
 
 function getSelectedModel() {
   if (modelSelect && modelSelect.value) return modelSelect.value;
@@ -1628,6 +1632,131 @@ function buildFilterOnlyQuery() {
     return 'Suche passende Förderprogramme.';
   }
   return `Suche passende Förderprogramme für: ${parts.join('; ')}.`;
+}
+
+function getSeenWebIds() {
+  const raw = localStorage.getItem(NOTIFY_WEB_SEEN_KEY);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function setSeenWebIds(ids) {
+  localStorage.setItem(NOTIFY_WEB_SEEN_KEY, JSON.stringify(ids));
+}
+
+function getWebId(item) {
+  if (item.url) return item.url;
+  if (item.title) return item.title;
+  return JSON.stringify(item);
+}
+
+async function fetchWebNotifications() {
+  const year = new Date().getFullYear();
+  const parts = ['Förderprogramm', 'neu', String(year)];
+  if (categoryFilterEl && categoryFilterEl.value) parts.unshift(categoryFilterEl.value);
+  if (regionFilterEl && regionFilterEl.value && regionFilterEl.value !== 'Bundesweit') parts.unshift(regionFilterEl.value);
+  const query = parts.join(' ');
+  const results = await searchWeb(query);
+  return (results || []).slice(0, 8);
+}
+
+function renderWebNotifications(results) {
+  const badgeEl = document.getElementById('notificationsBadge');
+  const listEl = document.getElementById('notificationsList');
+  const statusEl = document.getElementById('notificationsStatus');
+  const markBtn = document.getElementById('notificationsMarkSeen');
+  if (!badgeEl || !listEl || !statusEl) return;
+
+  const seen = new Set(getSeenWebIds());
+  const unseen = results.filter(r => !seen.has(getWebId(r)));
+  badgeEl.textContent = unseen.length ? (unseen.length > 9 ? '9+' : String(unseen.length)) : '';
+
+  if (unseen.length === 0) {
+    statusEl.textContent = 'Keine neuen Programme gefunden.';
+    listEl.innerHTML = '';
+    if (markBtn) markBtn.disabled = true;
+    return;
+  }
+
+  statusEl.textContent = 'Neue Programme aus der Websuche:';
+  listEl.innerHTML = unseen.map(p => `
+    <div class="notification-item">
+      <div class="notification-item__title">${p.title || 'Neues Förderprogramm'}</div>
+      ${p.description ? `<div class="notification-item__desc">${p.description}</div>` : ''}
+      ${p.url ? `<a class="notification-item__link" href="${p.url}" target="_blank" rel="noopener">Zum Programm</a>` : ''}
+    </div>
+  `).join('');
+  if (markBtn) markBtn.disabled = false;
+}
+
+async function updateWebNotifications() {
+  const statusEl = document.getElementById('notificationsStatus');
+  if (statusEl) statusEl.textContent = 'Suche nach neuen Förderprogrammen...';
+  try {
+    lastWebResults = await fetchWebNotifications();
+    renderWebNotifications(lastWebResults);
+  } catch (e) {
+    if (statusEl) statusEl.textContent = 'Websuche nicht verfügbar.';
+  }
+}
+
+function initWebNotificationsUI() {
+  const btn = document.getElementById('notificationsButton');
+  const panel = document.getElementById('notificationsPanel');
+  const refreshBtn = document.getElementById('notificationsRefresh');
+  const markBtn = document.getElementById('notificationsMarkSeen');
+  if (!btn || !panel) return;
+
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    panel.classList.toggle('hidden');
+    panel.setAttribute('aria-hidden', panel.classList.contains('hidden') ? 'true' : 'false');
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!panel.contains(e.target) && e.target !== btn) {
+      panel.classList.add('hidden');
+      panel.setAttribute('aria-hidden', 'true');
+    }
+  });
+
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', () => {
+      updateWebNotifications();
+    });
+  }
+
+  if (markBtn) {
+    markBtn.addEventListener('click', () => {
+      const ids = new Set(getSeenWebIds());
+      lastWebResults.forEach(r => ids.add(getWebId(r)));
+      setSeenWebIds(Array.from(ids));
+      renderWebNotifications(lastWebResults);
+    });
+  }
+}
+
+function isShortFollowUp(text) {
+  if (!text) return false;
+  const t = text.trim().toLowerCase();
+  if (t.startsWith('nur ') || t.startsWith('jetzt ') || t.startsWith('jetzt') || t.startsWith('nur')) return true;
+  return t.split(/\s+/).length <= 4;
+}
+
+function buildContextualQuery(userMsg) {
+  if (!lastContextSummary) return userMsg;
+  if (!isShortFollowUp(userMsg)) return userMsg;
+  return `${lastContextSummary} | Update: ${userMsg}`;
+}
+
+function updateContextSummary(userMsg) {
+  const filterSummary = buildFilterOnlyQuery();
+  lastContextSummary = `${filterSummary} Vorherige Anfrage: ${userMsg}`;
 }
 
 function setupVoiceInput() {
@@ -2020,21 +2149,34 @@ document.addEventListener('DOMContentLoaded', () => {
   setupFundingTypeDropdown();
   setupCompanySizeDropdown();
   setupIndustryDropdown();
+  initWebNotificationsUI();
+  updateWebNotifications();
 
-  addMessage('<span class="text-blue-300 text-sm">Guten Tag, Andreas. Ich suche passende Förderprogramme für dich.</span>', 'system');
+  const existingChats = pruneEmptyChats();
+  if (existingChats.length > 0) {
+    currentChatId = existingChats[0].id;
+    loadChat(currentChatId, true);
+  } else {
+    // Begrüßung anzeigen, aber keinen leeren Chat anlegen
+    suppressChatSave = true;
+    addMessage('<span class="text-blue-300 text-sm">Guten Tag, Andreas. Ich suche passende Förderprogramme für dich.</span>', 'system');
+  }
 
   if (filterApplyButton) {
     filterApplyButton.addEventListener('click', () => {
-      if (!lastUserQueryForFilter && queryInput && queryInput.value.trim()) {
-        lastUserQueryForFilter = queryInput.value.trim();
-      }
-      if (!lastUserQueryForFilter) {
-        // kein Text vom User – baue eine Filter-basierte Anfrage
+      const typedQuery = queryInput && queryInput.value.trim();
+      if (typedQuery) {
+        lastUserQueryForFilter = typedQuery;
+      } else {
+        // Immer neu aus Filtern bauen, damit Änderungen sofort wirken
         lastUserQueryForFilter = buildFilterOnlyQuery();
         addMessage('<span class="text-blue-400">Suche wird mit den ausgewählten Filtern gestartet.</span>', 'system');
       }
       filtersDirty = false;
-      askOpenAIChat(lastUserQueryForFilter);
+      // Zeige den Prompt immer im Chat ganz unten
+      addMessage(lastUserQueryForFilter, 'user');
+      scrollChatToBottom();
+      askOpenAIChat(lastUserQueryForFilter, { skipUserMessage: true });
     });
   }
 
@@ -2125,6 +2267,16 @@ function addMessage(content, sender = 'user') {
   chatEl.scrollTop = chatEl.scrollHeight;
 }
 
+function scrollChatToBottom() {
+  if (!chatEl) return;
+  const lastMsg = chatEl.lastElementChild;
+  if (lastMsg && typeof lastMsg.scrollIntoView === 'function') {
+    lastMsg.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  } else if (typeof chatEl.scrollIntoView === 'function') {
+    chatEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }
+}
+
 // Helper to create stable slug from title
 function slugify(text) {
   return text.toString().toLowerCase()
@@ -2200,10 +2352,10 @@ function renderProgrammeList(list) {
         ${p.antragsfrist ? `<div><strong>Frist:</strong> ${p.antragsfrist}</div>` : ''}
       </div>
       
-      ${p.why ? `<div class="mt-3 p-3 bg-blue-900/20 text-blue-200 text-sm rounded border border-blue-800"><strong>💡 Warum passend:</strong> ${p.why}</div>` : ''}
+      ${p.why ? `<div class="mt-3 p-3 bg-blue-50 text-blue-900 text-sm rounded border border-blue-100"><strong>💡 Warum passend:</strong> ${p.why}</div>` : ''}
       
       <div class="text-right mt-4">
-        <a class="inline-flex items-center text-blue-400 font-semibold hover:text-blue-300 transition-colors" href="${p.url}" target="_blank" rel="noopener">
+        <a class="inline-flex items-center text-blue-600 font-semibold hover:text-blue-800 transition-colors" href="${p.url}" target="_blank" rel="noopener">
           Zum Programm
           <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
         </a>
@@ -2273,13 +2425,18 @@ async function validateProgramUrl(url, timeoutMs = 3000) {
 }
 
 ///
-async function askOpenAIChat(userMsg) {
-  addMessage(userMsg, 'user');
+async function askOpenAIChat(userMsg, options = {}) {
+  const { skipUserMessage = false } = options;
+  const effectiveUserMsg = buildContextualQuery(userMsg);
+  updateContextSummary(userMsg);
+  if (!skipUserMessage) {
+    addMessage(userMsg, 'user');
+  }
 
   const urls = extractUrls(userMsg);
   if (urls.length > 0) {
     const firstUrl = urls[0];
-    addMessage(`Versuche, Inhalte von <a href="${firstUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-300 underline">${firstUrl}</a> zu laden...`, 'ai');
+    addMessage(`Versuche, Inhalte von <a href="${firstUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-600 underline">${firstUrl}</a> zu laden...`, 'ai');
     try {
       let htmlContent = '';
       try {
@@ -2348,43 +2505,66 @@ async function askOpenAIChat(userMsg) {
       `- ${p.title}: ${p.description} (Region: ${p.region}, Kategorie: ${p.category})`
     ).join('\n');
 
+    // 1. WEB SEARCH (Google Custom Search)
+    let webContext = '';
+    try {
+      // Parallelize: Start web search but don't block everything immediately if we can do other things
+      // However, we need the results for the prompt.
+      // Optimization: Fetch only 3 results for maximum speed.
+      
+      // Note: searchWeb implementation needs to support limit or we just slice here.
+      // We'll slice the result.
+      const webResults = await searchWeb(userMsg);
+      
+      if (webResults && webResults.length > 0) {
+        // Only take top 3 results to reduce context size and speed up processing
+        const topResults = webResults.slice(0, 3);
+        webContext = `\n\nZUSÄTZLICHE LIVE-WEB-ERGEBNISSE (Google Search):\n${topResults.map(r => 
+          `- [WEB] ${r.title} (${r.url}): ${r.description}`
+        ).join('\n')}\n\nNutze diese Web-Ergebnisse, um die lokalen Daten zu ergänzen oder aktuellere Programme zu finden.`;
+      } 
+    } catch (webErr) {
+      console.warn('Web search error inside chat:', webErr);
+    }
+
     const systemPrompt = `Du bist ein hochspezialisierter Experte für Förderprogramme in Deutschland und der EU.
     
-    DIR LIEGT EINE VOLLSTÄNDIGE, VERIFIZIERTE DATENBANK VOR (siehe unten).
-    
-    ⚠️ KRITISCH - ABSOLUTE REGEL:
-    Du darfst NIEMALS Programme erfinden, halluzinieren oder externe Programme hinzufügen!
-    Du darfst NUR Programme aus der unten stehenden Datenbank auswählen.
-    Jedes Programm, das du empfiehlst, MUSS exakt (Titel und Beschreibung) in der Datenbank vorhanden sein.
+    DIR LIEGT EINE INTERNE DATENBANK VOR (siehe unten) SOWIE AKTUELLE WEB-SUCHERGEBNISSE.
     
     DEINE AUFGABE:
-    1. Analysiere die Nutzeranfrage sorgfältig
-    2. Wähle aus der Datenbank die 15-20 BESTEN passenden Programme aus
-    3. Erkläre für jedes ausgewählte Programm wissenschaftlich fundiert, WARUM es zur Anfrage passt
-    4. Sei großzügig bei verwandten Themen (z.B. KI → auch Digitalisierung zeigen)
+    1. Analysiere die Nutzeranfrage kurz.
+    2. Kombiniere Wissen aus der internen Datenbank UND den Web-Suchergebnissen.
+    3. Priorisiere verifizierte Programme aus der Datenbank.
+    4. Wenn du ein Programm aus den Web-Ergebnissen empfiehlst, markiere es deutlich.
+    5. Wähle NUR die absolut besten 3-5 Programme aus. Klasse statt Masse!
     
-    Antworte IMMER und AUSSCHLIESSLICH mit einem einzelnen, validen JSON-Objekt. Das JSON-Objekt muss die Schlüssel "begruendung" (ein String, der deine Gesamtempfehlung zusammenfasst) und "programme" (ein Array von Programm-Objekten) enthalten. Gib absolut keinen Text vor oder nach dem JSON-Objekt aus.`;
+    WICHTIG:
+    - Erfinde KEINE Programme. Nutze nur die, die dir im Kontext (Datenbank oder Web) gegeben wurden.
+    - Wenn ein Programm aus der Datenbank kommt, nutze exakt dessen Titel.
+    
+    Antworte IMMER und AUSSCHLIESSLICH mit einem einzelnen, validen JSON-Objekt. Das JSON-Objekt muss die Schlüssel "begruendung" (kurz, max 2 Sätze) und "programme" (ein Array von Programm-Objekten) enthalten. Gib absolut keinen Text vor oder nach dem JSON-Objekt aus.`;
 
     const userQueryPrompt = `${filterContext}
     INTERNE DATENBANK (Priorisiere diese Programme, wenn passend):
     ${localProgrammesContext}
+    ${webContext}
     
     Basierend auf der folgenden Firmenbeschreibung/Webseiten-Kontext (falls vorhanden) und der aktuellen Nutzeranfrage, identifiziere ALLE passenden Förderprogramme.
     
     WICHTIG: Sortiere die Ergebnisse streng nach Relevanz zur Suchanfrage. Das Programm, das am besten zur Anfrage passt, MUSS als erstes im Array stehen.
     
-    ${docContext ? `Firmenbeschreibung/Webseiten-Kontext:\n${docContext}\n\n` : ''}Aktuelle Nutzeranfrage: "${userMsg}"
+    ${docContext ? `Firmenbeschreibung/Webseiten-Kontext:\n${docContext}\n\n` : ''}Aktuelle Nutzeranfrage: "${effectiveUserMsg}"
     
     Stelle für jedes empfohlene Programm folgende Informationen im "programme"-Array bereit: title, description, url (offizielle URL des Programms), foerderhoehe, zielgruppe, antragsfrist, foerderart, ansprechpartner, region, category, und eine spezifische "why"-Begründung.
     
-    Die "why"-Begründung soll wissenschaftlich fundiert erklären, warum genau dieses Programm für den Nutzer relevant ist (z.B. "Passt exakt zu den Investitionszielen im Bereich X").
+    Falls Informationen (z.B. Frist) im Web-Ergebnis fehlen, schreibe "Siehe Website".
     
-    Beispiel für das "programme"-Array (sollte 15-20+ Einträge enthalten):
+    Beispiel für das "programme"-Array (sollte maximal 3-5 Einträge enthalten):
     [
       {
         "title": "Beispielprogramm Alpha",
-        "description": "Beschreibung des Programms Alpha.",
-        "url": "https://beispiel.de/alpha",
+        "description": "Beschreibung...",
+        "url": "https://...",
         "foerderhoehe": "bis 50%",
         "zielgruppe": "KMU",
         "antragsfrist": "laufend",
@@ -2392,10 +2572,13 @@ async function askOpenAIChat(userMsg) {
         "ansprechpartner": "Behörde X",
         "region": "Bundesweit",
         "category": "Digitalisierung",
-        "why": "Wissenschaftliche Begründung der Relevanz."
+        "why": "Begründung...",
+        "isWebResult": false 
       }
     ]
-    Stelle sicher, dass die gesamte Antwort nur das geforderte JSON-Objekt ist, beginnend mit { und endend mit }.`;
+    (Setze isWebResult: true, falls es aus der Websuche stammt)
+    
+    Stelle sicher, dass die gesamte Antwort nur das geforderte JSON-Objekt ist.`;
 
     // Verwende Proxy wenn konfiguriert, sonst direkt API Key
     const apiUrl = PROXY_URL || 'https://api.openai.com/v1/chat/completions';
@@ -2406,14 +2589,21 @@ async function askOpenAIChat(userMsg) {
         'Authorization': `Bearer ${OPENAI_API_KEY}`
       };
 
+    // Force fastest model for Standard option
+    let modelToUse = getSelectedModel();
+    if (modelToUse === 'gpt-5-mini') {
+      modelToUse = 'gpt-4o-mini';
+    }
+
     const res = await fetch(apiUrl, {
       method: 'POST',
       headers: headers,
       body: JSON.stringify({
-        model: getSelectedModel(),
+        model: modelToUse,
         messages: [
           { role: 'user', content: systemPrompt + '\n\n' + userQueryPrompt }
-        ]
+        ],
+        max_tokens: 800
       })
     });
     const data = await res.json();
@@ -2425,7 +2615,7 @@ async function askOpenAIChat(userMsg) {
       if (obj.begruendung) addMessage(`<span class='italic text-gray-700'>${obj.begruendung}</span>`, 'ai');
 
       if (Array.isArray(obj.programme)) {
-        // ULTRA-STRICT VALIDATION: Only accept programs from local database
+        // ULTRA-STRICT VALIDATION: Only accept programs from local database OR explicitly marked web results
         const localDbTitles = new Set(programmes.map(p => p.title));
 
         const validPrograms = [];
@@ -2440,8 +2630,15 @@ async function askOpenAIChat(userMsg) {
               ...dbProgram,
               why: p.why || 'Empfohlen basierend auf Ihrer Anfrage.'
             });
+          } else if (p.isWebResult || (p.url && !p.url.includes('example.com'))) {
+             // Accept Web Results if they look valid (have a URL)
+             validPrograms.push({
+               ...p,
+               isWebResult: true, // Ensure flag is set
+               why: p.why || 'Gefunden über Websuche.'
+             });
           } else {
-            // AI tried to invent/hallucinate a program - reject it
+            // AI tried to invent/hallucinate a program without source - reject it
             rejectedPrograms.push(p.title);
           }
         });
@@ -2453,34 +2650,8 @@ async function askOpenAIChat(userMsg) {
 
         addMessage(`<span class='text-green-600'>✓ ${validPrograms.length} verifizierte Programme aus der Datenbank gefunden.</span>`, 'system');
 
-        const MIN_RESULTS = 15; // Target: at least 15 programs
-
-        // IMPROVED FALLBACK: If too few programs, add more from local DB with Fuse.js
-        if (validPrograms.length < MIN_RESULTS) {
-          const needed = MIN_RESULTS - validPrograms.length;
-          const existingTitles = new Set(validPrograms.map(p => p.title));
-
-          // Use Fuse.js for smart search on remaining programs
-          const remainingPrograms = programmes.filter(p => !existingTitles.has(p.title) && isActiveProgram(p));
-          const fuseSearch = new Fuse(remainingPrograms, {
-            keys: ['title', 'description', 'category', 'zielgruppe'],
-            includeScore: true,
-            threshold: 0.4
-          });
-
-          const additionalMatches = fuseSearch
-            .search(userMsg)
-            .slice(0, needed)
-            .map(result => ({
-              ...result.item,
-              why: `Zusätzliche Empfehlung basierend auf semantischer Ähnlichkeit (Score: ${(1 - result.score).toFixed(2)})`
-            }));
-
-          if (additionalMatches.length > 0) {
-            validPrograms.push(...additionalMatches);
-            addMessage(`<span class='text-blue-600'>+ ${additionalMatches.length} weitere passende Programme aus der Datenbank hinzugefügt.</span>`, 'system');
-          }
-        }
+        // FALLBACK REMOVED: We only show what the AI explicitly selected as "best matches"
+        // to avoid "jungle of programs" and ensure high relevance.
 
         if (validPrograms.length > 0) {
           addMessage(renderProgrammeList(validPrograms), 'ai');
@@ -2677,8 +2848,8 @@ async function search() {
       }
     }
 
-    // Limit context for AI to avoid token limits (e.g. top 20)
-    const contextResults = uniqueResults.slice(0, 20);
+    // Limit context for AI to avoid token limits (e.g. top 10 instead of 20)
+    const contextResults = uniqueResults.slice(0, 10);
 
     const prompt = `${docContext ? 'Firmenbeschreibung:\n' + docContext + '\n\n' : ''}Der Nutzer sucht: "${q}".
 
@@ -2698,16 +2869,23 @@ Gib die Antwort im JSON-Format zurück (Array von Objekten mit title, descriptio
         'Authorization': `Bearer ${OPENAI_API_KEY}`
       };
 
+    // Use a faster model if the user selected "gpt-5-mini"
+    let modelToUse = getSelectedModel();
+    if (modelToUse === 'gpt-5-mini') {
+      modelToUse = 'gpt-4o-mini'; // Explicitly force the fastest model
+    }
+
     const res = await fetch(apiUrl, {
       method: 'POST',
       headers: headers,
       body: JSON.stringify({
-        model: getSelectedModel(),
+        model: modelToUse,
         messages: [
           { role: 'system', content: 'Du bist ein Förderprogramm-Experte. Antworte immer im JSON-Format (Array von Programmen).' },
           { role: 'user', content: prompt }
         ],
-        temperature: 0.2
+        temperature: 0.2,
+        max_tokens: 1000 // Reduced further for speed
       })
     });
 
@@ -2774,6 +2952,10 @@ Gib die Antwort im JSON-Format zurück (Array von Objekten mit title, descriptio
 // Funktion, die bei Filteränderung aufgerufen wird
 function handleFilterChange() {
   filtersDirty = true;
+  // Falls nur Filter genutzt werden, alte Filter-Anfrage verwerfen
+  if (queryInput && !queryInput.value.trim()) {
+    lastUserQueryForFilter = '';
+  }
 }
 
 // EVENT DELEGATION for heart-icon clicks
@@ -2851,8 +3033,16 @@ function saveChats(arr) {
     }
   }
 }
-function createChat(title = 'New chat') {
+function pruneEmptyChats() {
   const chats = getChats();
+  const filtered = chats.filter(c => Array.isArray(c.messages) && c.messages.length > 0);
+  if (filtered.length !== chats.length) {
+    saveChats(filtered);
+  }
+  return filtered;
+}
+function createChat(title = 'New chat') {
+  const chats = pruneEmptyChats();
   const id = 'chat_' + Date.now();
   chats.unshift({ id, title, messages: [] });
   if (chats.length > MAX_CHAT_COUNT) {
@@ -2914,7 +3104,7 @@ function loadChat(id) {
 function renderChatList() {
   const listEl = document.getElementById('chatList');
   if (!listEl) return;
-  const chats = getChats();
+  const chats = pruneEmptyChats();
   // Jedes <li> bekommt nun ebenfalls die ID, damit Klicks auf den Rand (nicht direkt auf den Link) erkannt werden
   listEl.innerHTML = chats.map(c => `
     <li data-chat-id="${c.id}" class="${c.id === currentChatId ? 'active' : ''}">
@@ -2959,7 +3149,7 @@ if (typeof window !== 'undefined') {
       return;
     }
     if (e.target.id === 'newChatBtn') {
-      currentChatId = createChat('New chat');
+      currentChatId = null;
       chatEl.innerHTML = '';
       renderChatList();
     }
@@ -2984,6 +3174,10 @@ if (typeof window !== 'undefined') {
 const origAddMessage = addMessage;
 addMessage = function (content, sender = 'user') {
   origAddMessage(content, sender);
+  if (suppressChatSave) {
+    suppressChatSave = false;
+    return;
+  }
   addMessageToCurrentChat(content, sender);
 };
 

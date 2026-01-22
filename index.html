@@ -21,7 +21,13 @@
         </div>
         <h1>Förderprogramm-Finder</h1>
       </div>
-      <nav>
+      <nav class="header-actions">
+        <button id="notificationsButton" type="button" class="notification-btn" aria-label="Neue Förderprogramme">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0a3 3 0 11-6 0h6z" />
+          </svg>
+          <span id="notificationsBadge" class="notification-badge"></span>
+        </button>
         <a href="favorites.html">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -32,6 +38,18 @@
       </nav>
     </div>
   </header>
+
+  <div id="notificationsPanel" class="notification-panel hidden" aria-hidden="true">
+    <div class="notification-panel__header">
+      <span>Neue Förderprogramme (Web)</span>
+      <button id="notificationsRefresh" type="button">Aktualisieren</button>
+    </div>
+    <div id="notificationsStatus" class="notification-status">Suche nach neuen Förderprogrammen...</div>
+    <div id="notificationsList" class="notification-list"></div>
+    <div class="notification-panel__actions">
+      <button id="notificationsMarkSeen" type="button" disabled>Als gelesen markieren</button>
+    </div>
+  </div>
 
   <div class="app-shell">
     <aside class="sidebar">
@@ -171,29 +189,37 @@
 
     <!-- Chat Input Form -->
     <form id="chatForm">
-      <input id="query" type="text" placeholder="Frage zu Förderprogrammen, z. B. 'KI Förderung NRW'"
-        autocomplete="off" />
-      <div class="model-select">
-        <label for="modelSelect">Antwort-Tiefe</label>
-        <select id="modelSelect" aria-label="Antwort-Tiefe auswählen">
-          <option value="gpt-5-mini" selected>Schnell & günstig (Standard)</option>
-          <option value="gpt-5">Tief & teurer (bessere Qualität)</option>
-        </select>
+      <!-- Upload Button -->
+      <button id="uploadBtn" type="button" class="icon-btn" title="Datei hochladen">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+        </svg>
+        <span class="sr-only">Datei hochladen</span>
+      </button>
+
+      <div class="input-wrapper">
+        <input id="query" type="text" placeholder="Frage zu Förderprogrammen..." autocomplete="off" />
+        <button id="micBtn" type="button" class="mic-btn-inside" title="Spracheingabe">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clip-rule="evenodd" />
+          </svg>
+        </button>
       </div>
-      <button id="micBtn" type="button" title="Spracheingabe">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd"
-            d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z"
-            clip-rule="evenodd" />
-        </svg>
-      </button>
-      <button id="sendBtn" type="submit">
-        <span>Senden</span>
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-          <path
-            d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
-        </svg>
-      </button>
+
+      <div class="actions-wrapper">
+        <div class="model-select-compact">
+          <select id="modelSelect" aria-label="Antwort-Tiefe">
+            <option value="gpt-5-mini">Standard</option>
+            <option value="gpt-5">Qualität</option>
+          </select>
+        </div>
+
+        <button id="sendBtn" type="submit" class="send-btn" title="Senden">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+          </svg>
+        </button>
+      </div>
     </form>
 
   </main>
