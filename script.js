@@ -1453,9 +1453,18 @@ programmes.forEach((p, index) => {
 });
 
 const fuse = new Fuse(programmes, {
-  keys: ['title', 'description'],
+  keys: [
+    { name: 'title', weight: 3 },
+    { name: 'description', weight: 2 },
+    { name: 'category', weight: 2 },
+    { name: 'region', weight: 1.5 },
+    { name: 'zielgruppe', weight: 1 },
+    { name: 'foerderart', weight: 1 },
+  ],
   includeScore: true,
-  threshold: 0.4
+  threshold: 0.3,
+  ignoreLocation: true,
+  minMatchCharLength: 3,
 });
 
 /* ----------  FAVORITES (LocalStorage)  ---------- */
@@ -1634,6 +1643,11 @@ function buildFilterOnlyQuery() {
   return `Suche passende Förderprogramme für: ${parts.join('; ')}.`;
 }
 
+const NOTIFY_CACHE_KEY = 'mpoolWebNotifyCache';
+const NOTIFY_CACHE_TTL = 15 * 60 * 1000;
+const NOTIFY_AUTO_INTERVAL = 15 * 60 * 1000;
+let notifyRefreshTimer = null;
+
 function getSeenWebIds() {
   const raw = localStorage.getItem(NOTIFY_WEB_SEEN_KEY);
   if (!raw) return [];
@@ -1655,14 +1669,91 @@ function getWebId(item) {
   return JSON.stringify(item);
 }
 
+function getNotifyCache() {
+  try {
+    const raw = localStorage.getItem(NOTIFY_CACHE_KEY);
+    if (!raw) return null;
+    const cache = JSON.parse(raw);
+    if (Date.now() - cache.ts < NOTIFY_CACHE_TTL) return cache;
+  } catch (e) { /* ignore */ }
+  return null;
+}
+
+function setNotifyCache(results) {
+  try {
+    localStorage.setItem(NOTIFY_CACHE_KEY, JSON.stringify({ ts: Date.now(), results }));
+  } catch (e) { /* ignore */ }
+}
+
 async function fetchWebNotifications() {
   const year = new Date().getFullYear();
-  const parts = ['Förderprogramm', 'neu', String(year)];
-  if (categoryFilterEl && categoryFilterEl.value) parts.unshift(categoryFilterEl.value);
-  if (regionFilterEl && regionFilterEl.value && regionFilterEl.value !== 'Bundesweit') parts.unshift(regionFilterEl.value);
-  const query = parts.join(' ');
-  const results = await searchWeb(query);
-  return (results || []).slice(0, 8);
+
+  const queries = [
+    `Ressourcen Management Förderprogramm neu ${year} Deutschland Unternehmen`,
+    `Nachhaltigkeitsberichterstattung CSRD Förderung ${year} Deutschland`,
+    `Klimabilanzierung Förderprogramm ${year} Deutschland Unternehmen`,
+    `Digitalisierung Förderprogramm neu ${year} Deutschland KMU`,
+  ];
+
+  const maxQueries = Math.min(queries.length, 4);
+  const selectedQueries = queries.slice(0, maxQueries);
+
+  const allResults = [];
+  const seenUrls = new Set();
+
+  const searchPromises = selectedQueries.map(async (q) => {
+    try {
+      const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX}&q=${encodeURIComponent(q)}&num=5&sort=date`;
+      const res = await fetch(searchUrl);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return (data.items || []).map(item => ({
+        title: item.title,
+        description: item.snippet || '',
+        url: item.link,
+        source: extractDomain(item.link),
+        searchQuery: q,
+      }));
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const batchResults = await Promise.all(searchPromises);
+  for (const batch of batchResults) {
+    for (const item of batch) {
+      const url = (item.url || '').toLowerCase();
+      if (seenUrls.has(url)) continue;
+      if (/youtube|facebook|twitter|instagram|tiktok/.test(url)) continue;
+      const text = (item.title + ' ' + item.description).toLowerCase();
+      if (/österreich|schweiz|\.at\/|\.ch\/|switzerland|austria/i.test(url + ' ' + text)
+        && !/deutschland|deutsch|bundesweit|bund\.de|bmwk|bafa|kfw/i.test(text)) continue;
+      seenUrls.add(url);
+      allResults.push(item);
+    }
+  }
+
+  allResults.sort((a, b) => {
+    const aYear = extractYearFromText(a.title + ' ' + a.description);
+    const bYear = extractYearFromText(b.title + ' ' + b.description);
+    return bYear - aYear;
+  });
+
+  return allResults.slice(0, 15);
+}
+
+function extractDomain(url) {
+  try {
+    return new URL(url).hostname.replace('www.', '');
+  } catch (e) {
+    return '';
+  }
+}
+
+function extractYearFromText(text) {
+  const matches = text.match(/20[2-3]\d/g);
+  if (!matches) return 2000;
+  return Math.max(...matches.map(Number));
 }
 
 function renderWebNotifications(results) {
@@ -1670,38 +1761,85 @@ function renderWebNotifications(results) {
   const listEl = document.getElementById('notificationsList');
   const statusEl = document.getElementById('notificationsStatus');
   const markBtn = document.getElementById('notificationsMarkSeen');
+  const tsEl = document.getElementById('notificationsTimestamp');
   if (!badgeEl || !listEl || !statusEl) return;
 
   const seen = new Set(getSeenWebIds());
   const unseen = results.filter(r => !seen.has(getWebId(r)));
+  const seenResults = results.filter(r => seen.has(getWebId(r)));
+
   badgeEl.textContent = unseen.length ? (unseen.length > 9 ? '9+' : String(unseen.length)) : '';
 
-  if (unseen.length === 0) {
+  if (results.length === 0) {
     statusEl.textContent = 'Keine neuen Programme gefunden.';
     listEl.innerHTML = '';
     if (markBtn) markBtn.disabled = true;
     return;
   }
 
-  statusEl.textContent = 'Neue Programme aus der Websuche:';
-  listEl.innerHTML = unseen.map(p => `
-    <div class="notification-item">
-      <div class="notification-item__title">${p.title || 'Neues Förderprogramm'}</div>
+  const unseenCount = unseen.length;
+  statusEl.textContent = unseenCount > 0
+    ? `${unseenCount} neue${unseenCount === 1 ? 's' : ''} Programm${unseenCount === 1 ? '' : 'e'} gefunden:`
+    : 'Alle Programme gelesen. Letzte Ergebnisse:';
+
+  const renderItem = (p, isNew) => `
+    <div class="notification-item ${isNew ? 'notification-item--new' : ''}">
+      <div class="notification-item__header">
+        <div class="notification-item__title">${p.title || 'Neues Förderprogramm'}</div>
+        ${isNew ? '<span class="notification-new-tag">NEU</span>' : ''}
+      </div>
       ${p.description ? `<div class="notification-item__desc">${p.description}</div>` : ''}
-      ${p.url ? `<a class="notification-item__link" href="${p.url}" target="_blank" rel="noopener">Zum Programm</a>` : ''}
-    </div>
-  `).join('');
-  if (markBtn) markBtn.disabled = false;
+      <div class="notification-item__footer">
+        ${p.source ? `<span class="notification-item__source">${p.source}</span>` : ''}
+        ${p.url ? `<a class="notification-item__link" href="${p.url}" target="_blank" rel="noopener">Zum Programm &rarr;</a>` : ''}
+      </div>
+    </div>`;
+
+  const html = [
+    ...unseen.map(p => renderItem(p, true)),
+    ...seenResults.slice(0, 5).map(p => renderItem(p, false)),
+  ].join('');
+
+  listEl.innerHTML = html;
+  if (markBtn) markBtn.disabled = unseenCount === 0;
 }
 
-async function updateWebNotifications() {
+function updateNotifyTimestamp() {
+  const tsEl = document.getElementById('notificationsTimestamp');
+  if (!tsEl) return;
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  tsEl.textContent = `Zuletzt geprüft: ${hh}:${mm} Uhr`;
+}
+
+async function updateWebNotifications(forceRefresh = false) {
   const statusEl = document.getElementById('notificationsStatus');
+  const refreshBtn = document.getElementById('notificationsRefresh');
+
+  if (!forceRefresh) {
+    const cache = getNotifyCache();
+    if (cache && cache.results) {
+      lastWebResults = cache.results;
+      renderWebNotifications(lastWebResults);
+      updateNotifyTimestamp();
+      return;
+    }
+  }
+
   if (statusEl) statusEl.textContent = 'Suche nach neuen Förderprogrammen...';
+  if (refreshBtn) refreshBtn.disabled = true;
+
   try {
     lastWebResults = await fetchWebNotifications();
+    setNotifyCache(lastWebResults);
     renderWebNotifications(lastWebResults);
+    updateNotifyTimestamp();
   } catch (e) {
+    console.warn('[Notifications] Fehler:', e);
     if (statusEl) statusEl.textContent = 'Websuche nicht verfügbar.';
+  } finally {
+    if (refreshBtn) refreshBtn.disabled = false;
   }
 }
 
@@ -1714,21 +1852,23 @@ function initWebNotificationsUI() {
 
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
+    const wasHidden = panel.classList.contains('hidden');
     panel.classList.toggle('hidden');
     panel.setAttribute('aria-hidden', panel.classList.contains('hidden') ? 'true' : 'false');
+    if (wasHidden && lastWebResults.length === 0) {
+      updateWebNotifications(true);
+    }
   });
 
   document.addEventListener('click', (e) => {
-    if (!panel.contains(e.target) && e.target !== btn) {
+    if (!panel.contains(e.target) && !btn.contains(e.target)) {
       panel.classList.add('hidden');
       panel.setAttribute('aria-hidden', 'true');
     }
   });
 
   if (refreshBtn) {
-    refreshBtn.addEventListener('click', () => {
-      updateWebNotifications();
-    });
+    refreshBtn.addEventListener('click', () => updateWebNotifications(true));
   }
 
   if (markBtn) {
@@ -1739,6 +1879,9 @@ function initWebNotificationsUI() {
       renderWebNotifications(lastWebResults);
     });
   }
+
+  if (notifyRefreshTimer) clearInterval(notifyRefreshTimer);
+  notifyRefreshTimer = setInterval(() => updateWebNotifications(true), NOTIFY_AUTO_INTERVAL);
 }
 
 function isShortFollowUp(text) {
@@ -1760,75 +1903,118 @@ function updateContextSummary(userMsg) {
 }
 
 function setupVoiceInput() {
-  if (!supportsSpeech) return;
+  const micBtn = document.getElementById('micBtn');
+  if (!micBtn) return;
 
-  // Create microphone button dynamically
-  const micBtn = document.createElement('button');
-  micBtn.id = 'micBtn';
-  micBtn.type = 'button';
-  micBtn.title = 'Spracheingabe';
-  micBtn.className = 'mic-button ml-2'; // Custom CSS class
-  micBtn.innerHTML = `
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
-      <path d="M12 14a3 3 0 003-3V5a3 3 0 00-6 0v6a3 3 0 003 3z"/>
-      <path d="M19 10v1a7 7 0 01-14 0v-1h-2v1a9 9 0 008 8.94V22h-2v2h6v-2h-2v-2.06A9 9 0 0021 11v-1h-2z"/>
-    </svg>`;
-  chatForm.insertBefore(micBtn, chatForm.firstChild);
+  if (!supportsSpeech) {
+    micBtn.style.display = 'none';
+    return;
+  }
 
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   recognition = new SpeechRecognition();
   recognition.lang = 'de-DE';
-  recognition.interimResults = false;
+  recognition.interimResults = true;
+  recognition.continuous = false;
   recognition.maxAlternatives = 1;
 
   let listening = false;
+  let savedPlaceholder = '';
 
   micBtn.addEventListener('click', () => {
     if (listening) {
       recognition.stop();
       return;
     }
-    recognition.start();
+    try {
+      recognition.start();
+    } catch (e) {
+      console.warn('[Voice] Konnte nicht starten:', e.message);
+    }
   });
 
   recognition.addEventListener('start', () => {
     listening = true;
+    savedPlaceholder = queryInput.placeholder;
+    queryInput.placeholder = 'Sprechen Sie jetzt...';
     micBtn.classList.add('recording');
+    queryInput.value = '';
   });
 
   recognition.addEventListener('end', () => {
     listening = false;
+    queryInput.placeholder = savedPlaceholder;
     micBtn.classList.remove('recording');
+    const finalText = queryInput.value.trim();
+    if (finalText) {
+      chatForm.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    }
   });
 
   recognition.addEventListener('result', (event) => {
-    const transcript = event.results[0][0].transcript.trim();
-    queryInput.value = transcript;
-    search(); // trigger the same search workflow
+    let interimTranscript = '';
+    let finalTranscript = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const t = event.results[i][0].transcript;
+      if (event.results[i].isFinal) {
+        finalTranscript += t;
+      } else {
+        interimTranscript += t;
+      }
+    }
+    if (finalTranscript) {
+      queryInput.value = finalTranscript.trim();
+    } else {
+      queryInput.value = interimTranscript;
+    }
+  });
+
+  recognition.addEventListener('error', (event) => {
+    listening = false;
+    queryInput.placeholder = savedPlaceholder;
+    micBtn.classList.remove('recording');
+    if (event.error !== 'no-speech' && event.error !== 'aborted') {
+      console.warn('[Voice] Fehler:', event.error);
+    }
   });
 }
 
-// Datei-Upload und Voice-Input initialisieren, wenn DOM bereit
 /* ----------  FILE UPLOAD (PDF/TXT)  ---------- */
 function setupFileUpload() {
-  // verstecktes Input-Feld
-  const fileInput = document.createElement('input');
-  fileInput.type = 'file';
-  fileInput.id = 'docFile';
-  fileInput.accept = '.pdf,.txt';
-  fileInput.className = 'hidden';
-  chatForm.appendChild(fileInput);
+  const uploadBtn = document.getElementById('uploadBtn');
+  const fileInput = document.getElementById('docFile');
+  const chipBar = document.getElementById('fileChipBar');
+  if (!uploadBtn || !fileInput) return;
 
-  // Label-Button
-  const fileLbl = document.createElement('label');
-  fileLbl.htmlFor = 'docFile';
-  fileLbl.className = 'ml-2 cursor-pointer hover:underline'; // Removed text-blue-600
-  fileLbl.textContent = 'Datei hochladen';
-  chatForm.insertBefore(fileLbl, chatForm.firstChild.nextSibling);
+  uploadBtn.addEventListener('click', () => fileInput.click());
+
+  function showFileChip(name) {
+    if (!chipBar) return;
+    chipBar.innerHTML = '';
+    const chip = document.createElement('div');
+    chip.className = 'file-chip';
+    chip.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+      <span class="file-chip-name">${name}</span>
+      <button type="button" class="file-chip-remove" title="Datei entfernen">&times;</button>`;
+    chipBar.appendChild(chip);
+    chipBar.classList.remove('hidden');
+    chip.querySelector('.file-chip-remove').addEventListener('click', () => {
+      docContext = '';
+      fileInput.value = '';
+      chipBar.classList.add('hidden');
+      chipBar.innerHTML = '';
+    });
+    queryInput.focus();
+  }
 
   fileInput.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    showFileChip(file.name);
 
     try {
       let text = '';
@@ -1836,7 +2022,7 @@ function setupFileUpload() {
         text = await file.text();
       } else if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
         if (!window.pdfjsLib) {
-          alert('PDF-Parser konnte nicht geladen werden.');
+          addMessage('<span class="text-red-600">PDF-Parser konnte nicht geladen werden.</span>', 'ai');
           return;
         }
         window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
@@ -1849,14 +2035,17 @@ function setupFileUpload() {
           text += content.items.map(it => it.str).join(' ') + '\n';
         }
       } else {
-        alert('Dateityp nicht unterstützt. Bitte PDF oder TXT verwenden.');
+        addMessage('<span class="text-orange-600">Dateityp nicht unterstützt. Bitte PDF oder TXT.</span>', 'ai');
+        chipBar.classList.add('hidden');
+        chipBar.innerHTML = '';
         return;
       }
       docContext = text.slice(0, 8000);
-      addMessage('📄 Datei analysiert – Kontext wird in die nächste KI-Anfrage eingefügt.', 'ai');
     } catch (err) {
       console.error('Datei-Analyse-Fehler', err);
       addMessage('<span class="text-red-600">Datei konnte nicht verarbeitet werden.</span>', 'ai');
+      chipBar.classList.add('hidden');
+      chipBar.innerHTML = '';
     }
   });
 }
@@ -2221,6 +2410,10 @@ document.addEventListener('DOMContentLoaded', () => {
       };
 
       filterContent.addEventListener('transitionend', handleTransitionEnd);
+      setTimeout(() => {
+        filterContent.style.maxHeight = 'none';
+        filterContent.style.overflow = 'visible';
+      }, 500);
       updateAriaExpanded(true);
     };
 
@@ -2245,9 +2438,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     filterToggle.setAttribute('role', 'button');
     filterToggle.setAttribute('tabindex', '0');
-    updateAriaExpanded(true);
-    filterContent.style.maxHeight = filterContent.scrollHeight + 'px';
-    filterContent.style.overflow = 'visible';
+
+    const startsCollapsed = filterSection.classList.contains('collapsed');
+    if (startsCollapsed) {
+      updateAriaExpanded(false);
+      filterContent.style.maxHeight = '0px';
+      filterContent.style.overflow = 'hidden';
+      filterContent.style.opacity = '0';
+    } else {
+      updateAriaExpanded(true);
+      filterContent.style.maxHeight = 'none';
+      filterContent.style.overflow = 'visible';
+    }
 
     filterToggle.addEventListener('click', toggleFilters);
     filterToggle.addEventListener('keydown', (event) => {
@@ -2470,7 +2672,18 @@ async function askOpenAIChat(userMsg, options = {}) {
     }
   }
 
-  addMessage('<span class="flex items-center gap-2 text-blue-700"><svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>KI sucht passende Förderprogramme…</span>', 'ai');
+  const loadingEl = document.createElement('div');
+  loadingEl.className = 'mb-2 max-w-2xl self-start chat-bubble-ai chat-loading-indicator';
+  loadingEl.innerHTML = '<span class="flex items-center gap-2 text-blue-700"><svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>KI sucht passende Förderprogramme…</span>';
+  chatEl.appendChild(loadingEl);
+  chatEl.scrollTop = chatEl.scrollHeight;
+
+  const removeLoading = () => {
+    document.querySelectorAll('.chat-loading-indicator').forEach(el => {
+      el.classList.add('removing');
+      setTimeout(() => el.remove(), 250);
+    });
+  };
 
   try {
     const selectedRegion = regionFilterEl.value;
@@ -2494,15 +2707,14 @@ async function askOpenAIChat(userMsg, options = {}) {
     if (selectedIndustries.length > 0) filters.push(`Unternehmensbranche: ${selectedIndustries.join(', ')}`);
 
     if (filters.length > 0) {
-      filterContext = `Berücksichtige folgende explizite Filtervorgaben: ${filters.join('; ')}\n\n`;
+      filterContext = `PFLICHTFILTER (Programme MÜSSEN diese Kriterien erfüllen):\n${filters.join('\n')}\n\nProgramme die diese Filter NICHT erfüllen, DÜRFEN NICHT empfohlen werden.\n\n`;
     }
 
-    // Serialize local programmes for context (simplified to save tokens)
-    // IMPORTANT: Filter out inactive programs here too!
-    const activeProgrammes = programmes.filter(p => isActiveProgram(p));
+    const filteredByUserFilters = applyFilters(programmes);
+    const activeProgrammes = filteredByUserFilters.length > 0 ? filteredByUserFilters : programmes.filter(p => isActiveProgram(p));
 
     const localProgrammesContext = activeProgrammes.map(p =>
-      `- ${p.title}: ${p.description} (Region: ${p.region}, Kategorie: ${p.category})`
+      `- ${p.title} | ${p.category || '-'} | ${p.region || '-'} | ${p.foerderart || '-'} | Zielgruppe: ${p.zielgruppe || '-'} | Frist: ${p.antragsfrist || '-'}`
     ).join('\n');
 
     // 1. WEB SEARCH (Google Custom Search)
@@ -2517,68 +2729,50 @@ async function askOpenAIChat(userMsg, options = {}) {
       const webResults = await searchWeb(userMsg);
       
       if (webResults && webResults.length > 0) {
-        // Only take top 3 results to reduce context size and speed up processing
-        const topResults = webResults.slice(0, 3);
-        webContext = `\n\nZUSÄTZLICHE LIVE-WEB-ERGEBNISSE (Google Search):\n${topResults.map(r => 
+        const topResults = webResults.slice(0, 5);
+        webContext = `\n\nAKTUELLE WEB-ERGEBNISSE (${new Date().getFullYear()}, Google Search):\n${topResults.map(r => 
           `- [WEB] ${r.title} (${r.url}): ${r.description}`
-        ).join('\n')}\n\nNutze diese Web-Ergebnisse, um die lokalen Daten zu ergänzen oder aktuellere Programme zu finden.`;
+        ).join('\n')}\n\nBEVORZUGE aktuelle Web-Ergebnisse wenn sie besser zur Anfrage passen als ältere DB-Einträge.`;
       } 
     } catch (webErr) {
       console.warn('Web search error inside chat:', webErr);
     }
 
-    const systemPrompt = `Du bist ein hochspezialisierter Experte für Förderprogramme in Deutschland und der EU.
-    
-    DIR LIEGT EINE INTERNE DATENBANK VOR (siehe unten) SOWIE AKTUELLE WEB-SUCHERGEBNISSE.
-    
-    DEINE AUFGABE:
-    1. Analysiere die Nutzeranfrage kurz.
-    2. Kombiniere Wissen aus der internen Datenbank UND den Web-Suchergebnissen.
-    3. Priorisiere verifizierte Programme aus der Datenbank.
-    4. Wenn du ein Programm aus den Web-Ergebnissen empfiehlst, markiere es deutlich.
-    5. Wähle NUR die absolut besten 3-5 Programme aus. Klasse statt Masse!
-    
-    WICHTIG:
-    - Erfinde KEINE Programme. Nutze nur die, die dir im Kontext (Datenbank oder Web) gegeben wurden.
-    - Wenn ein Programm aus der Datenbank kommt, nutze exakt dessen Titel.
-    
-    Antworte IMMER und AUSSCHLIESSLICH mit einem einzelnen, validen JSON-Objekt. Das JSON-Objekt muss die Schlüssel "begruendung" (kurz, max 2 Sätze) und "programme" (ein Array von Programm-Objekten) enthalten. Gib absolut keinen Text vor oder nach dem JSON-Objekt aus.`;
+    const systemPrompt = `Du bist ein Experte für Förderprogramme in Deutschland und der EU. Deine Aufgabe ist es, EXAKT passende Programme zu finden.
 
-    const userQueryPrompt = `${filterContext}
-    INTERNE DATENBANK (Priorisiere diese Programme, wenn passend):
-    ${localProgrammesContext}
-    ${webContext}
-    
-    Basierend auf der folgenden Firmenbeschreibung/Webseiten-Kontext (falls vorhanden) und der aktuellen Nutzeranfrage, identifiziere ALLE passenden Förderprogramme.
-    
-    WICHTIG: Sortiere die Ergebnisse streng nach Relevanz zur Suchanfrage. Das Programm, das am besten zur Anfrage passt, MUSS als erstes im Array stehen.
-    
-    ${docContext ? `Firmenbeschreibung/Webseiten-Kontext:\n${docContext}\n\n` : ''}Aktuelle Nutzeranfrage: "${effectiveUserMsg}"
-    
-    Stelle für jedes empfohlene Programm folgende Informationen im "programme"-Array bereit: title, description, url (offizielle URL des Programms), foerderhoehe, zielgruppe, antragsfrist, foerderart, ansprechpartner, region, category, und eine spezifische "why"-Begründung.
-    
-    Falls Informationen (z.B. Frist) im Web-Ergebnis fehlen, schreibe "Siehe Website".
-    
-    Beispiel für das "programme"-Array (sollte maximal 3-5 Einträge enthalten):
-    [
-      {
-        "title": "Beispielprogramm Alpha",
-        "description": "Beschreibung...",
-        "url": "https://...",
-        "foerderhoehe": "bis 50%",
-        "zielgruppe": "KMU",
-        "antragsfrist": "laufend",
-        "foerderart": "Zuschuss",
-        "ansprechpartner": "Behörde X",
-        "region": "Bundesweit",
-        "category": "Digitalisierung",
-        "why": "Begründung...",
-        "isWebResult": false 
-      }
-    ]
-    (Setze isWebResult: true, falls es aus der Websuche stammt)
-    
-    Stelle sicher, dass die gesamte Antwort nur das geforderte JSON-Objekt ist.`;
+STRIKTE REGELN:
+1. Empfehle NUR Programme, die DIREKT und KONKRET zur Suchanfrage passen.
+2. Wenn Filter gesetzt sind (Region, Kategorie, Förderart, Größe), müssen Programme diese EXAKT erfüllen.
+3. PRIORISIERE NEUERE/AKTUELLE Programme (2025/2026) vor älteren.
+4. Wenn Web-Ergebnisse aktuellere oder besser passende Programme liefern, bevorzuge diese.
+5. Erfinde KEINE Programme. Nutze NUR Programme aus der Datenbank oder den Web-Ergebnissen.
+6. Wenn ein Programm aus der Datenbank kommt, nutze EXAKT dessen Titel.
+7. Empfehle 3-8 Programme, sortiert nach Relevanz (bestes zuerst).
+8. Jedes Programm braucht eine spezifische "why"-Begründung, die erklärt warum es zur Anfrage passt.
+
+QUALITÄTSKONTROLLE:
+- Ein Programm für "Digitalisierung" ist NICHT relevant für "Energieeffizienz" und umgekehrt.
+- Ein Programm für "Nordrhein-Westfalen" ist NICHT relevant wenn der User "Bayern" filtert.
+- Bundesweite/EU-weite Programme passen IMMER zu jeder Region.
+- Abgelaufene Programme NICHT empfehlen.
+
+Antworte NUR mit einem validen JSON-Objekt: {"begruendung": "...", "programme": [...]}
+Kein Text vor oder nach dem JSON.`;
+
+    const userQueryPrompt = `${filterContext}INTERNE DATENBANK:
+${localProgrammesContext}
+${webContext}
+${docContext ? `\nFIRMENBESCHREIBUNG/KONTEXT:\n${docContext}\n` : ''}
+NUTZERANFRAGE: "${effectiveUserMsg}"
+
+ANWEISUNGEN:
+1. Finde die BESTEN 3-8 Programme für diese Anfrage.
+2. Sortiere STRENG nach Relevanz - das relevanteste Programm zuerst.
+3. BEVORZUGE neuere Programme (2025/2026) und aktuelle Web-Ergebnisse.
+4. Für jedes Programm liefere: title, description, url, foerderhoehe, zielgruppe, antragsfrist, foerderart, ansprechpartner, region, category, why, isWebResult (true wenn aus Web).
+5. "why" muss SPEZIFISCH erklären, warum dieses Programm zur Anfrage passt.
+6. Fehlende Infos bei Web-Ergebnissen: "Siehe Website".
+7. Antworte NUR mit dem JSON-Objekt.`;
 
     // Verwende Proxy wenn konfiguriert, sonst direkt API Key
     const apiUrl = PROXY_URL || 'https://api.openai.com/v1/chat/completions';
@@ -2603,7 +2797,7 @@ async function askOpenAIChat(userMsg, options = {}) {
         messages: [
           { role: 'user', content: systemPrompt + '\n\n' + userQueryPrompt }
         ],
-        max_tokens: 800
+        max_tokens: 2000
       })
     });
     const data = await res.json();
@@ -2611,6 +2805,7 @@ async function askOpenAIChat(userMsg, options = {}) {
     content = content.replace(/```json|```/g, '').trim();
     let obj = null;
     try {
+      removeLoading();
       obj = JSON.parse(content.match(/\{[\s\S]*\}/)?.[0] || content);
       if (obj.begruendung) addMessage(`<span class='italic text-gray-700'>${obj.begruendung}</span>`, 'ai');
 
@@ -2645,10 +2840,16 @@ async function askOpenAIChat(userMsg, options = {}) {
 
         if (rejectedPrograms.length > 0) {
           console.warn('[STRICT VALIDATION] Rejected non-DB programs:', rejectedPrograms);
-          addMessage(`<span class='text-orange-600'>⚠️ ${rejectedPrograms.length} nicht-verifizierte Programme wurden entfernt (nur Programme aus der Datenbank werden angezeigt).</span>`, 'system');
         }
 
-        addMessage(`<span class='text-green-600'>✓ ${validPrograms.length} verifizierte Programme aus der Datenbank gefunden.</span>`, 'system');
+        const dbCount = validPrograms.filter(p => !p.isWebResult).length;
+        const webCount = validPrograms.filter(p => p.isWebResult).length;
+        let statusParts = [];
+        if (dbCount > 0) statusParts.push(`${dbCount} aus Datenbank`);
+        if (webCount > 0) statusParts.push(`${webCount} aus Websuche`);
+        if (statusParts.length > 0) {
+          addMessage(`<span class='text-green-600'>&#10003; ${validPrograms.length} passende Programme gefunden (${statusParts.join(', ')}).</span>`, 'system');
+        }
 
         // FALLBACK REMOVED: We only show what the AI explicitly selected as "best matches"
         // to avoid "jungle of programs" and ensure high relevance.
@@ -2662,13 +2863,29 @@ async function askOpenAIChat(userMsg, options = {}) {
         throw new Error('Programme nicht gefunden oder Format falsch.');
       }
     } catch (e) {
-      addMessage('<span class="text-red-600">KI-Antwort konnte nicht interpretiert werden.<br><br><b>Rohantwort:</b><br>' + content.replace(/</g, '&lt;'), 'ai');
+      removeLoading();
+      console.warn('[askOpenAIChat] Parse-Fehler:', e.message, '| RAW (gekürzt):', (content || '').slice(0, 300));
+      addMessage('<span class="text-orange-600">Die KI-Antwort konnte leider nicht verarbeitet werden. Zeige stattdessen lokale Ergebnisse:</span>', 'ai');
+      const filteredFallback = applyFilters(programmes);
+      const fallbackQuery = lastUserQueryForFilter || queryInput.value;
+      const fallbackMatches = fallbackQuery
+        ? fuse.search(fallbackQuery, { limit: 10 }).map(r => r.item).filter(p => filteredFallback.includes(p))
+        : filteredFallback.slice(0, 10);
+      if (fallbackMatches.length > 0) {
+        addMessage(renderProgrammeList(fallbackMatches.length > 0 ? fallbackMatches : filteredFallback.slice(0, 10)), 'ai');
+      } else if (filteredFallback.length > 0) {
+        addMessage(renderProgrammeList(filteredFallback.slice(0, 10)), 'ai');
+      } else {
+        addMessage('Keine passenden Programme gefunden. Versuchen Sie es mit anderen Suchbegriffen.', 'ai');
+      }
     }
   } catch (err) {
-    addMessage(`<span class="text-orange-600">KI nicht verfügbar (${err.message}). Zeige lokale Ergebnisse basierend auf Filtern und letzter Eingabe:</span>`, 'ai');
+    removeLoading();
+    console.warn('[askOpenAIChat] Netzwerk/API-Fehler:', err.message);
+    addMessage(`<span class="text-orange-600">KI nicht verfügbar (${err.message}). Zeige lokale Ergebnisse:</span>`, 'ai');
     const filteredLocalProgrammes = applyFilters(programmes);
-    const lastUserQuery = queryInput.value;
-    const matches = lastUserQuery ? fuse.search(lastUserQuery, { store: filteredLocalProgrammes, limit: 10 }).map(r => r.item) : filteredLocalProgrammes.slice(0, 10);
+    const lastUserQuery = lastUserQueryForFilter || queryInput.value;
+    const matches = lastUserQuery ? fuse.search(lastUserQuery, { limit: 10 }).map(r => r.item) : filteredLocalProgrammes.slice(0, 10);
     if (matches.length > 0) {
       addMessage(renderProgrammeList(matches), 'ai');
     } else {
@@ -2747,28 +2964,48 @@ function applyFilters(list) {
   const selectedCompanySizes = companySizeDropdownPanel ?
     Array.from(companySizeDropdownPanel.querySelectorAll('input:checked')).map(cb => cb.value) :
     [];
+  const selectedIndustries = industryDropdownPanel ?
+    Array.from(industryDropdownPanel.querySelectorAll('input:checked')).map(cb => cb.value) :
+    [];
 
   return list.filter(p => {
-    const matchesRegion = !region || (p.region ? p.region.includes(region) : new RegExp(region, 'i').test(p.title + p.description));
-    const matchesCategory = !category || (p.category ? p.category.includes(category) : new RegExp(category, 'i').test(p.title + p.description));
-    const matchesFundingType = selectedFundingTypes.length === 0 || (p.foerderart && selectedFundingTypes.some(type => p.foerderart.includes(type)));
+    const pRegion = (p.region || '').toLowerCase().trim();
+    const filterRegion = region.toLowerCase().trim();
+    const matchesRegion = !region
+      || pRegion === filterRegion
+      || pRegion === 'bundesweit'
+      || pRegion === 'deutschland'
+      || pRegion === 'eu-weit';
 
-    // Simple text search for company size in 'zielgruppe' as a fallback
-    const kmuMapping = {
-      'Kleines Unternehmen': 'KMU',
-      'Mittleres Unternehmen': 'KMU',
-      'Kleinstunternehmen': 'KMU',
+    const matchesCategory = !category
+      || (p.category && p.category.toLowerCase() === category.toLowerCase());
+
+    const matchesFundingType = selectedFundingTypes.length === 0
+      || (p.foerderart && selectedFundingTypes.some(type =>
+        p.foerderart.toLowerCase().includes(type.toLowerCase())
+      ));
+
+    const sizeKeywords = {
+      'Großes Unternehmen': ['großunternehmen', 'große unternehmen', 'groß', 'alle unternehmensgrößen', 'unternehmen'],
+      'Mittleres Unternehmen': ['kmu', 'mittel', 'mittlere', 'kleine und mittlere', 'alle unternehmensgrößen'],
+      'Kleines Unternehmen': ['kmu', 'klein', 'kleine', 'kleine und mittlere', 'alle unternehmensgrößen'],
+      'Kleinstunternehmen': ['kmu', 'kleinst', 'mikro', 'kleine und mittlere', 'alle unternehmensgrößen'],
     };
-    const matchesCompanySize = selectedCompanySizes.length === 0 || (p.zielgruppe && selectedCompanySizes.some(size => {
-      const mapping = kmuMapping[size];
-      if (mapping && p.zielgruppe.includes(mapping)) return true;
-      return p.zielgruppe.includes(size);
-    }));
+    const matchesCompanySize = selectedCompanySizes.length === 0
+      || (p.zielgruppe && selectedCompanySizes.some(size => {
+        const zg = p.zielgruppe.toLowerCase();
+        const keywords = sizeKeywords[size] || [size.toLowerCase()];
+        return keywords.some(kw => zg.includes(kw));
+      }));
 
-    // STRICT ACTIVE FILTER
+    const matchesIndustry = selectedIndustries.length === 0
+      || (p.branche && selectedIndustries.some(ind => p.branche.toLowerCase().includes(ind.toLowerCase())))
+      || (p.zielgruppe && selectedIndustries.some(ind => p.zielgruppe.toLowerCase().includes(ind.toLowerCase())))
+      || (p.description && selectedIndustries.some(ind => p.description.toLowerCase().includes(ind.toLowerCase())));
+
     const isActive = isActiveProgram(p);
 
-    return matchesRegion && matchesCategory && matchesFundingType && matchesCompanySize && isActive;
+    return matchesRegion && matchesCategory && matchesFundingType && matchesCompanySize && matchesIndustry && isActive;
   });
 }
 
@@ -2777,29 +3014,53 @@ function applyFilters(list) {
 const GOOGLE_API_KEY = 'AIzaSyCvEMzR-p2xKTUtUe1wtQmvWMnVGjlnpNk';
 const GOOGLE_CX = 'd780077053afc4147';
 
+function buildWebSearchQuery(userQuery) {
+  const parts = [userQuery];
+  const region = regionFilterEl?.value;
+  const category = categoryFilterEl?.value;
+
+  if (!/förder|zuschuss|programm|beihilfe/i.test(userQuery)) {
+    parts.push('Förderprogramm');
+  }
+  if (region && !/bundesweit/i.test(region)) parts.push(region);
+  if (category) parts.push(category);
+
+  const currentYear = new Date().getFullYear();
+  if (!new RegExp(String(currentYear)).test(userQuery)) {
+    parts.push(String(currentYear));
+  }
+
+  return parts.join(' ');
+}
+
 async function searchWeb(query) {
-  // Fallback: Direct client-side search if Proxy is not configured for search
   try {
-    const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX}&q=${encodeURIComponent(query)}`;
+    const optimizedQuery = buildWebSearchQuery(query);
+    const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX}&q=${encodeURIComponent(optimizedQuery)}&num=7`;
     const res = await fetch(searchUrl);
 
     if (!res.ok) throw new Error(`Search failed with status ${res.status}`);
 
     const data = await res.json();
     if (data.items) {
-      return data.items.map(item => ({
-        title: item.title,
-        description: item.snippet,
-        url: item.link,
-        foerderhoehe: 'Siehe Website',
-        zielgruppe: 'Unbekannt',
-        antragsfrist: 'Unbekannt', // Web results are checked by AI context usually
-        foerderart: 'Unbekannt',
-        ansprechpartner: 'Siehe Website',
-        region: 'Unbekannt',
-        category: 'Web Search',
-        isWebResult: true
-      }));
+      return data.items
+        .filter(item => {
+          const url = (item.link || '').toLowerCase();
+          return !url.includes('youtube.com') && !url.includes('facebook.com') && !url.includes('twitter.com');
+        })
+        .map(item => ({
+          title: item.title,
+          description: item.snippet,
+          url: item.link,
+          foerderhoehe: 'Siehe Website',
+          zielgruppe: 'Siehe Website',
+          antragsfrist: 'Siehe Website',
+          foerderart: 'Siehe Website',
+          ansprechpartner: 'Siehe Website',
+          region: 'Siehe Website',
+          category: 'Web Search',
+          isWebResult: true
+        }));
     }
     return [];
   } catch (e) {
@@ -2932,17 +3193,23 @@ Gib die Antwort im JSON-Format zurück (Array von Objekten mit title, descriptio
 
       renderResults(finalResults, 'ai');
     } catch (e) {
-      addMessage('<span class="text-red-600">KI-Antwort konnte nicht interpretiert werden.<br><br><b>Rohantwort:</b><br>' + content.replace(/</g, '&lt;'), 'ai');
+      console.warn('[filterSearch] Parse-Fehler:', e.message, '| RAW (gekürzt):', (content || '').slice(0, 300));
+      addMessage('<span class="text-orange-600">Die KI-Antwort konnte leider nicht verarbeitet werden. Zeige stattdessen lokale Ergebnisse:</span>', 'ai');
+      const localFallback = q ? fuse.search(q).map(r => r.item) : filteredList;
+      const activeFallback = localFallback.filter(p => isActiveProgram(p)).slice(0, 10);
+      if (activeFallback.length > 0) {
+        renderResults(activeFallback, 'local');
+      } else {
+        renderResults(filteredList.slice(0, 10), 'local');
+      }
     }
   } catch (err) {
     let errorMsg = err.message;
     if (errorMsg.includes('429')) {
       errorMsg = '⚠️ OpenAI-Limit erreicht (429). Bitte Guthaben prüfen.';
     }
-    resultsEl.innerHTML = `<p class="text-orange-600">KI nicht verfügbar (${errorMsg}). Zeige lokale Ergebnisse:</p>`;
-    // Fallback to local only
+    addMessage(`<span class="text-orange-600">KI nicht verfügbar (${errorMsg}). Zeige lokale Ergebnisse:</span>`, 'ai');
     const matches = q ? fuse.search(q).map(r => r.item) : filteredList;
-    // Filter matches for active programs
     const activeMatches = matches.filter(p => isActiveProgram(p));
     const limited = activeMatches.slice(0, 10);
     renderResults(limited, 'local');
@@ -3181,9 +3448,41 @@ addMessage = function (content, sender = 'user') {
   addMessageToCurrentChat(content, sender);
 };
 
-// render chat list on load
+// render chat list on load + UI enhancements
 document.addEventListener('DOMContentLoaded', () => {
   renderChatList();
+
+  const welcomeEl = document.getElementById('welcomeState');
+  function updateWelcomeVisibility() {
+    if (!welcomeEl) return;
+    welcomeEl.style.display = chatEl && chatEl.children.length > 0 ? 'none' : '';
+  }
+  if (chatEl) {
+    new MutationObserver(updateWelcomeVisibility).observe(chatEl, { childList: true });
+  }
+  updateWelcomeVisibility();
+
+  document.querySelectorAll('.suggestion-card').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const q = btn.getAttribute('data-query');
+      if (q && queryInput) {
+        queryInput.value = q;
+        chatForm?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      }
+    });
+  });
+
+  const sidebarToggle = document.getElementById('sidebarToggle');
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+  if (sidebarToggle && sidebar) {
+    const toggleSidebar = () => {
+      sidebar.classList.toggle('open');
+      overlay?.classList.toggle('active');
+    };
+    sidebarToggle.addEventListener('click', toggleSidebar);
+    overlay?.addEventListener('click', toggleSidebar);
+  }
 });
 
 function renameChat(id, title) {
@@ -3277,3 +3576,293 @@ async function filterProgrammesWithValidLinks(arr) {
   const invalidCount = results.length - valid.length;
   return { valid, invalidCount };
 }
+
+/* ==================== VOICE CALL ==================== */
+(function initVoiceCall() {
+  const hasSpeech = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
+  const hasTTS = 'speechSynthesis' in window;
+  if (!hasSpeech || !hasTTS) {
+    const fab = document.getElementById('voiceCallBtn');
+    if (fab) fab.style.display = 'none';
+    return;
+  }
+
+  const fab = document.getElementById('voiceCallBtn');
+  const overlay = document.getElementById('voiceCallOverlay');
+  const statusEl = document.getElementById('voiceCallStatus');
+  const transcriptEl = document.getElementById('voiceCallTranscript');
+  const endBtn = document.getElementById('voiceCallEnd');
+  if (!fab || !overlay || !endBtn) return;
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let callRecognition = null;
+  let callActive = false;
+  let isSpeaking = false;
+
+  function setCallState(state) {
+    overlay.className = 'voice-call-overlay state-' + state;
+    if (statusEl) {
+      const labels = {
+        listening: 'Ich höre zu...',
+        processing: 'Suche passende Programme...',
+        speaking: 'Antwort wird vorgelesen...',
+        idle: 'Bereit',
+      };
+      statusEl.textContent = labels[state] || '';
+      statusEl.className = 'voice-call-status ' + state;
+    }
+  }
+
+  let currentAudio = null;
+
+  function speak(text) {
+    return new Promise(async (resolve) => {
+      if (!text) { resolve(); return; }
+      isSpeaking = true;
+      setCallState('speaking');
+
+      try {
+        const ttsUrl = PROXY_URL
+          ? PROXY_URL.replace(/\/?$/, '/tts')
+          : 'https://api.openai.com/v1/audio/speech';
+        const ttsHeaders = PROXY_URL
+          ? { 'Content-Type': 'application/json' }
+          : { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_API_KEY}` };
+
+        const res = await fetch(ttsUrl, {
+          method: 'POST',
+          headers: ttsHeaders,
+          body: JSON.stringify({
+            model: 'tts-1',
+            voice: 'nova',
+            input: text,
+            speed: 1.12,
+            response_format: 'mp3'
+          })
+        });
+
+        if (!res.ok) throw new Error('TTS API error ' + res.status);
+
+        const blob = await res.blob();
+        const audioUrl = URL.createObjectURL(blob);
+        currentAudio = new Audio(audioUrl);
+        currentAudio.playbackRate = 1.08;
+
+        currentAudio.onended = () => {
+          isSpeaking = false;
+          URL.revokeObjectURL(audioUrl);
+          currentAudio = null;
+          resolve();
+        };
+        currentAudio.onerror = () => {
+          isSpeaking = false;
+          URL.revokeObjectURL(audioUrl);
+          currentAudio = null;
+          resolve();
+        };
+
+        await currentAudio.play();
+      } catch (err) {
+        console.warn('[VoiceCall] OpenAI TTS fehlgeschlagen, nutze Browser-Stimme:', err.message);
+        if (hasTTS) {
+          window.speechSynthesis.cancel();
+          const utter = new SpeechSynthesisUtterance(text);
+          utter.lang = 'de-DE';
+          utter.rate = 1.0;
+          const voices = window.speechSynthesis.getVoices();
+          const deVoice = voices.find(v => v.lang.startsWith('de') && v.name.includes('Google'))
+                       || voices.find(v => v.lang.startsWith('de'));
+          if (deVoice) utter.voice = deVoice;
+          utter.onend = () => { isSpeaking = false; resolve(); };
+          utter.onerror = () => { isSpeaking = false; resolve(); };
+          window.speechSynthesis.speak(utter);
+        } else {
+          isSpeaking = false;
+          resolve();
+        }
+      }
+    });
+  }
+
+  function extractSpokenText(html) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    tmp.querySelectorAll('.programme-card .meta, .status-badge, button, svg, .heart-icon').forEach(el => el.remove());
+    let text = (tmp.textContent || '').replace(/\s+/g, ' ').trim();
+    if (text.length > 600) text = text.slice(0, 600) + '. Weitere Details finden Sie im Chat.';
+    return text;
+  }
+
+  const BUNDESLAENDER = [
+    'Baden-Württemberg','Bayern','Berlin','Brandenburg','Bremen','Hamburg',
+    'Hessen','Mecklenburg-Vorpommern','Niedersachsen','Nordrhein-Westfalen',
+    'Rheinland-Pfalz','Saarland','Sachsen','Sachsen-Anhalt',
+    'Schleswig-Holstein','Thüringen'
+  ];
+
+  function detectRegionFromText(text) {
+    const lower = text.toLowerCase();
+    for (const bl of BUNDESLAENDER) {
+      if (lower.includes(bl.toLowerCase())) return bl;
+    }
+    if (/\bbundesweit\b/i.test(text)) return 'Bundesweit';
+    return null;
+  }
+
+  async function askAndSpeak(userText) {
+    setCallState('processing');
+    if (transcriptEl) transcriptEl.textContent = `"${userText}"`;
+
+    addMessage(userText, 'user');
+
+    try {
+      const apiUrl = PROXY_URL || 'https://api.openai.com/v1/chat/completions';
+      const headers = PROXY_URL
+        ? { 'Content-Type': 'application/json' }
+        : { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_API_KEY}` };
+
+      const spokenRegion = detectRegionFromText(userText);
+
+      let relevantProgrammes = programmes.filter(p => isActiveProgram(p));
+      if (spokenRegion && spokenRegion !== 'Bundesweit') {
+        relevantProgrammes = relevantProgrammes.filter(p => {
+          const r = (p.region || '').toLowerCase();
+          return r === spokenRegion.toLowerCase()
+              || r === 'bundesweit'
+              || r === 'deutschland'
+              || r === 'eu-weit';
+        });
+      }
+
+      const dbContext = relevantProgrammes.slice(0, 20).map(p =>
+        `${p.title} | ${p.region || '-'} | ${p.category || '-'} | Frist: ${p.antragsfrist || 'laufend'}`
+      ).join('\n');
+
+      const regionHint = spokenRegion
+        ? `\nDer Nutzer sucht für: ${spokenRegion}. Empfehle NUR Programme für ${spokenRegion} oder bundesweite Programme. NIEMALS Programme aus anderen Bundesländern!`
+        : '';
+
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: `Du bist ein Förderprogramm-Berater am Telefon. Antworte KURZ: 2-3 Sätze. Nenne 1-2 passende Programme und sage warum sie passen. Natürliche Sprache, kein JSON.
+
+WICHTIGE REGELN:
+- Empfehle NUR aktive, gültige Programme (nicht abgelaufen).
+- Wenn eine Region genannt wird, NUR Programme aus dieser Region oder bundesweite.
+- NIEMALS Programme aus anderen Bundesländern empfehlen.
+- Bevorzuge neuere Programme (2025/2026).${regionHint}
+
+Programme:\n${dbContext}` },
+            { role: 'user', content: userText }
+          ],
+          max_tokens: 180,
+          temperature: 0.5
+        })
+      });
+      const data = await res.json();
+      const answer = data.choices?.[0]?.message?.content || 'Entschuldigung, ich konnte leider keine Antwort finden.';
+
+      addMessage(answer, 'ai');
+      await speak(answer);
+    } catch (err) {
+      const fallback = 'Entschuldigung, bei der Suche ist ein Fehler aufgetreten. Versuchen Sie es nochmal.';
+      addMessage(fallback, 'ai');
+      await speak(fallback);
+    }
+  }
+
+  function startListening() {
+    if (!callActive) return;
+    if (isSpeaking) { setTimeout(startListening, 300); return; }
+
+    setCallState('listening');
+    if (transcriptEl) transcriptEl.textContent = '';
+
+    callRecognition = new SpeechRecognition();
+    callRecognition.lang = 'de-DE';
+    callRecognition.interimResults = true;
+    callRecognition.continuous = false;
+    callRecognition.maxAlternatives = 1;
+
+    let finalText = '';
+
+    callRecognition.onresult = (event) => {
+      let interim = '';
+      finalText = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const t = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalText += t;
+        } else {
+          interim += t;
+        }
+      }
+      if (transcriptEl) transcriptEl.textContent = finalText || interim;
+    };
+
+    callRecognition.onend = async () => {
+      if (!callActive) return;
+      const text = finalText.trim();
+      if (text.length > 1) {
+        await askAndSpeak(text);
+        startListening();
+      } else {
+        startListening();
+      }
+    };
+
+    callRecognition.onerror = (event) => {
+      if (!callActive) return;
+      if (event.error === 'no-speech' || event.error === 'aborted') {
+        startListening();
+        return;
+      }
+      console.warn('[VoiceCall] Fehler:', event.error);
+      setTimeout(startListening, 1000);
+    };
+
+    try {
+      callRecognition.start();
+    } catch (e) {
+      setTimeout(startListening, 500);
+    }
+  }
+
+  function startCall() {
+    callActive = true;
+    overlay.classList.remove('hidden');
+    setCallState('idle');
+
+    speak('Hallo! Wie kann ich Ihnen helfen?').then(() => {
+      startListening();
+    });
+  }
+
+  function endCall() {
+    callActive = false;
+    isSpeaking = false;
+    window.speechSynthesis.cancel();
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio = null;
+    }
+    if (callRecognition) {
+      try { callRecognition.abort(); } catch (e) { /* ignore */ }
+    }
+    overlay.classList.add('hidden');
+    overlay.className = 'voice-call-overlay hidden';
+    if (transcriptEl) transcriptEl.textContent = '';
+  }
+
+  fab.addEventListener('click', startCall);
+  endBtn.addEventListener('click', endCall);
+
+  if (window.speechSynthesis.onvoiceschanged !== undefined) {
+    window.speechSynthesis.onvoiceschanged = () => {};
+  }
+  window.speechSynthesis.getVoices();
+})();

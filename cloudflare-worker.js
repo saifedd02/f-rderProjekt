@@ -23,6 +23,48 @@ export default {
       });
     }
 
+    const url = new URL(request.url);
+
+    // TTS Endpoint
+    if (url.pathname === '/tts') {
+      try {
+        const body = await request.json();
+        const ttsResponse = await fetch('https://api.openai.com/v1/audio/speech', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${env.OPENAI_API_KEY}`
+          },
+          body: JSON.stringify({
+            model: body.model || 'tts-1',
+            voice: body.voice || 'nova',
+            input: body.input || '',
+            speed: body.speed || 1.0,
+            response_format: body.response_format || 'mp3'
+          })
+        });
+
+        if (!ttsResponse.ok) {
+          const err = await ttsResponse.text();
+          return new Response(err, { status: ttsResponse.status, headers: corsHeaders });
+        }
+
+        const audioBuffer = await ttsResponse.arrayBuffer();
+        return new Response(audioBuffer, {
+          status: 200,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'audio/mpeg',
+          }
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
     try {
       // Request body lesen
       const body = await request.json();

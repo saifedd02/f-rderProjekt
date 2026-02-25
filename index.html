@@ -6,34 +6,46 @@
   <title>mpool Consulting · Förderprogramm-Finder</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
   <link rel="stylesheet" href="styles.css">
-
+</head>
 
 <body class="min-h-screen flex flex-col">
   <!-- Header -->
   <header>
-    <div class="max-w-7xl mx-auto w-full flex flex-col md:flex-row items-center justify-between gap-4">
-      <div class="flex items-center gap-4">
+    <div class="header-inner">
+      <div class="header-left">
+        <button id="sidebarToggle" type="button" class="sidebar-toggle" aria-label="Sidebar umschalten">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
         <div class="logo-chip">
           <img src="https://www.mpool-consulting-do.de/wp-content/uploads/2020/05/cropped-cropped-mpool_consulting.png"
             alt="Mpool Consulting Logo" />
         </div>
-        <h1>Förderprogramm-Finder</h1>
+        <div class="header-title-group">
+          <h1>Förderprogramm-Finder</h1>
+          <p class="header-subline">Finden Sie passende Förderprogramme</p>
+        </div>
       </div>
       <nav class="header-actions">
-        <button id="notificationsButton" type="button" class="notification-btn" aria-label="Neue Förderprogramme">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0a3 3 0 11-6 0h6z" />
+        <button id="notificationsButton" type="button" class="notification-text-btn" aria-label="Neue Förderprogramme">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0a3 3 0 11-6 0h6z" />
           </svg>
-          <span id="notificationsBadge" class="notification-badge"></span>
+          <span class="notification-text-label">Neue Programme</span>
+          <span id="notificationsBadge" class="notification-count-badge"></span>
         </button>
-        <a href="favorites.html">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        <a href="favorites.html" class="favorites-link">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
               d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
           </svg>
-          Meine Favoriten
+          <span>Favoriten</span>
         </a>
       </nav>
     </div>
@@ -41,41 +53,59 @@
 
   <div id="notificationsPanel" class="notification-panel hidden" aria-hidden="true">
     <div class="notification-panel__header">
-      <span>Neue Förderprogramme (Web)</span>
-      <button id="notificationsRefresh" type="button">Aktualisieren</button>
+      <span>Neue Förderprogramme</span>
+      <button id="notificationsRefresh" type="button" title="Jetzt aktualisieren">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h5M20 20v-5h-5M4 9a9 9 0 0114.32-4.32M20 15a9 9 0 01-14.32 4.32" />
+        </svg>
+        Aktualisieren
+      </button>
     </div>
+    <div id="notificationsTimestamp" class="notification-timestamp"></div>
     <div id="notificationsStatus" class="notification-status">Suche nach neuen Förderprogrammen...</div>
     <div id="notificationsList" class="notification-list"></div>
     <div class="notification-panel__actions">
-      <button id="notificationsMarkSeen" type="button" disabled>Als gelesen markieren</button>
+      <button id="notificationsMarkSeen" type="button" disabled>Alle als gelesen markieren</button>
     </div>
   </div>
 
+  <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
   <div class="app-shell">
-    <aside class="sidebar">
+    <aside id="sidebar" class="sidebar">
       <div class="sidebar-header">
         <span>Chats</span>
-        <button id="newChatBtn" type="button">Neu</button>
+        <button id="newChatBtn" type="button">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          Neu
+        </button>
       </div>
       <ul id="chatList"></ul>
     </aside>
 
     <!-- Main Content -->
-    <main class="flex-grow w-full max-w-5xl mx-auto p-4 md:p-8 flex flex-col">
+    <main class="main-content">
 
     <!-- Filter Section -->
-    <div class="filter-section">
+    <div class="filter-section collapsed">
       <h2 id="filterToggle">
-        <span>Suche & Filter</span>
-        <svg id="filterToggleIcon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 transform transition-transform"
+        <div class="filter-toggle-left">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+          </svg>
+          <span>Suche & Filter</span>
+        </div>
+        <svg id="filterToggleIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
           fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
         </svg>
       </h2>
 
       <div id="filterContent">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div>
+        <div class="filter-grid-2">
+          <div class="filter-field">
             <label for="regionFilter">Region</label>
             <select id="regionFilter">
               <option value="">Alle Regionen</option>
@@ -98,7 +128,7 @@
               <option>Thüringen</option>
             </select>
           </div>
-          <div>
+          <div class="filter-field">
             <label for="categoryFilter">Förderbereich</label>
             <select id="categoryFilter">
               <option value="">Alle Kategorien</option>
@@ -116,16 +146,15 @@
           </div>
         </div>
 
-        <!-- Custom Dropdowns Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="filter-grid-3">
           <!-- Unternehmensbranche -->
-          <div>
+          <div class="filter-field">
             <label>Unternehmensbranche</label>
             <div class="relative" id="industryDropdownContainer">
               <button type="button" id="industryDropdownButton"
-                class="w-full p-3 text-left flex justify-between items-center">
+                class="dropdown-trigger">
                 <span id="industryDropdownLabel">Alle auswählen</span>
-                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                   <path fill-rule="evenodd"
                     d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
                     clip-rule="evenodd" />
@@ -136,13 +165,13 @@
           </div>
 
           <!-- Förderart -->
-          <div>
+          <div class="filter-field">
             <label>Förderart</label>
             <div class="relative" id="fundingTypeDropdownContainer">
               <button type="button" id="fundingTypeDropdownButton"
-                class="w-full p-3 text-left flex justify-between items-center">
+                class="dropdown-trigger">
                 <span id="fundingTypeDropdownLabel">Alle auswählen</span>
-                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                   <path fill-rule="evenodd"
                     d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
                     clip-rule="evenodd" />
@@ -153,7 +182,7 @@
           </div>
 
           <!-- Unternehmensgröße -->
-          <div>
+          <div class="filter-field">
             <label class="flex items-center gap-2">
               <span>Unternehmensgröße</span>
               <span class="info-dot" role="img" aria-label="Info zu Unternehmensgrößen"
@@ -163,9 +192,9 @@
             </label>
             <div class="relative" id="companySizeDropdownContainer">
               <button type="button" id="companySizeDropdownButton"
-                class="w-full p-3 text-left flex justify-between items-center">
+                class="dropdown-trigger">
                 <span id="companySizeDropdownLabel">Alle auswählen</span>
-                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                   <path fill-rule="evenodd"
                     d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
                     clip-rule="evenodd" />
@@ -176,11 +205,51 @@
           </div>
         </div>
 
-        <div class="flex justify-end">
-          <button id="filterApplyButton" type="button" class="px-4 py-2 text-sm font-semibold bg-white text-black rounded-md hover:opacity-90 transition">
+        <div class="filter-actions">
+          <button id="filterApplyButton" type="button" class="filter-apply-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
             Suche mit Filter
           </button>
         </div>
+      </div>
+    </div>
+
+    <!-- Welcome State -->
+    <div id="welcomeState" class="welcome-state">
+      <div class="welcome-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </div>
+      <h2 class="welcome-title">Willkommen beim Förderprogramm-Finder</h2>
+      <p class="welcome-subtitle">Stellen Sie eine Frage oder wählen Sie einen Vorschlag</p>
+      <div class="welcome-suggestions">
+        <button type="button" class="suggestion-card" data-query="Welche Förderprogramme gibt es für Digitalisierung?">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+          <span>Digitalisierung-Förderungen</span>
+        </button>
+        <button type="button" class="suggestion-card" data-query="Welche Zuschüsse gibt es für KMU in NRW?">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+          </svg>
+          <span>Zuschüsse für KMU in NRW</span>
+        </button>
+        <button type="button" class="suggestion-card" data-query="Förderprogramme für Energieeffizienz und erneuerbare Energien">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          <span>Energieeffizienz-Förderungen</span>
+        </button>
+        <button type="button" class="suggestion-card" data-query="Welche Fördermittel gibt es für Nachhaltigkeitsberichterstattung?">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <span>Nachhaltigkeitsberichte</span>
+        </button>
       </div>
     </div>
 
@@ -189,44 +258,84 @@
 
     <!-- Chat Input Form -->
     <form id="chatForm">
-      <!-- Upload Button -->
-      <button id="uploadBtn" type="button" class="icon-btn" title="Datei hochladen">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-        </svg>
-        <span class="sr-only">Datei hochladen</span>
-      </button>
-
-      <div class="input-wrapper">
-        <input id="query" type="text" placeholder="Frage zu Förderprogrammen..." autocomplete="off" />
-        <button id="micBtn" type="button" class="mic-btn-inside" title="Spracheingabe">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clip-rule="evenodd" />
+      <div id="fileChipBar" class="file-chip-bar hidden"></div>
+      <div class="chat-input-card">
+        <button id="uploadBtn" type="button" class="icon-btn" title="Datei hochladen (PDF/TXT)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
           </svg>
         </button>
-      </div>
+        <input type="file" id="docFile" accept=".pdf,.txt" class="hidden" />
 
-      <div class="actions-wrapper">
-        <div class="model-select-compact">
-          <select id="modelSelect" aria-label="Antwort-Tiefe">
-            <option value="gpt-5-mini">Standard</option>
-            <option value="gpt-5">Qualität</option>
-          </select>
+        <div class="input-wrapper">
+          <input id="query" type="text" placeholder="Frage zu Förderprogrammen stellen..." autocomplete="off" />
+          <button id="micBtn" type="button" class="mic-btn-inside" title="Spracheingabe">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clip-rule="evenodd" />
+            </svg>
+          </button>
         </div>
 
-        <button id="sendBtn" type="submit" class="send-btn" title="Senden">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
-          </svg>
-        </button>
+        <div class="actions-wrapper">
+          <div class="model-select-compact">
+            <select id="modelSelect" aria-label="Antwort-Tiefe">
+              <option value="gpt-5-mini">Standard</option>
+              <option value="gpt-5">Qualität</option>
+            </select>
+          </div>
+
+          <button id="sendBtn" type="submit" class="send-btn" title="Senden">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
       </div>
     </form>
 
   </main>
   </div>
 
+  <!-- Voice Call Button -->
+  <button id="voiceCallBtn" type="button" class="voice-call-fab" title="Sprachanruf starten">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+    </svg>
+  </button>
+
+  <!-- Voice Call Overlay -->
+  <div id="voiceCallOverlay" class="voice-call-overlay hidden">
+    <div class="voice-call-card">
+      <div class="voice-call-avatar">
+        <img src="https://www.mpool-consulting-do.de/wp-content/uploads/2020/05/cropped-cropped-mpool_consulting.png" alt="mpool" />
+      </div>
+      <h2 class="voice-call-title">Förderprogramm-Berater</h2>
+      <p id="voiceCallStatus" class="voice-call-status">Bereit</p>
+
+      <div id="voiceCallVisualizer" class="voice-call-visualizer">
+        <span class="voice-bar"></span>
+        <span class="voice-bar"></span>
+        <span class="voice-bar"></span>
+        <span class="voice-bar"></span>
+        <span class="voice-bar"></span>
+      </div>
+
+      <p id="voiceCallTranscript" class="voice-call-transcript"></p>
+
+      <div class="voice-call-actions">
+        <button id="voiceCallEnd" type="button" class="voice-call-end" title="Anruf beenden">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.516l2.257-1.13a1 1 0 00.502-1.21L9.228 3.683A1 1 0 008.28 3H5z" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <footer>
-    © 2025 Mpool Consulting · Alle Rechte vorbehalten
+    <div class="footer-inner">
+      <span>© 2025 Mpool Consulting · Alle Rechte vorbehalten</span>
+    </div>
   </footer>
 
   <script src="script.js" type="module"></script>
