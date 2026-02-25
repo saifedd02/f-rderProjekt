@@ -1,0 +1,8 @@
+<script>start("/Users/sif-eddinekhayati/Documents/Förderprogramm KI/");</script>
+<script>onHasParentDirectory();</script>
+<script>addRow(".git",".git",1,384,"384 B",1751979234,"08.07.25, 14:53:54");</script>
+<script>addRow(".vscode",".vscode",1,96,"96 B",1749652180,"11.06.25, 16:29:40");</script>
+<script>addRow("favorites.html","favorites.html",0,6104,"6.0 kB",1749627295,"11.06.25, 09:34:55");</script>
+<script>addRow("favorites.js","favorites.js",0,23452,"22.9 kB",1749657046,"11.06.25, 17:50:46");</script>
+<script>addRow("index.html","index.html",0,33408,"32.6 kB",1749657044,"11.06.25, 17:50:44");</script>
+<script>addRow("script.js","script.js",0,108964,"106 kB",1751978238,"08.07.25, 14:37:18");</script>
