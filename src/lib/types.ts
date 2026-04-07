@@ -1,6 +1,6 @@
 // ── Dates ────────────────────────────────────────────────────────────
 /** Today's date injected into every server-side pipeline run. */
-export const TODAY = "2026-03-25";
+export const TODAY = "2026-04-07";
 
 // ── Company profile ──────────────────────────────────────────────────
 export interface CompanyProfile {

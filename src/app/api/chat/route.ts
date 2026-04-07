@@ -158,36 +158,61 @@ function buildSearchPrompt(
   const dissatisfied = isUserDissatisfied(message);
   const hasShownPrograms = shownPrograms && shownPrograms.length > 0;
 
+  // Determine region from filters or profile
+  const regionFilter = filters?.region && filters.region !== "Alle Regionen" ? filters.region : null;
+  const regionProfile = profile?.region || null;
+  const effectiveRegion = regionFilter || regionProfile;
+
+  // Determine foerderbereich from filters
+  const foerderbereich = filters?.foerderbereich && filters.foerderbereich !== "Alle Kategorien"
+    ? filters.foerderbereich : null;
+
   const exclusionBlock = hasShownPrograms
     ? `\nBEREITS GEZEIGTE PROGRAMME (NICHT WIEDERHOLEN):
 ${shownPrograms.map((n) => `- ${n}`).join("\n")}
-→ Diese Programme DARF du NICHT nochmal nennen. Suche nach KOMPLETT ANDEREN Programmen!\n`
+→ Suche nach KOMPLETT ANDEREN Programmen!\n`
     : "";
 
   const diversityInstruction = dissatisfied
-    ? `\nDER NUTZER IST UNZUFRIEDEN MIT DEN BISHERIGEN ERGEBNISSEN:
-- Suche unter ANDEREN Stichwörtern und bei ANDEREN Quellen als bisher
-- Erweitere die Suche auf Landes- und EU-Programme die noch nicht genannt wurden
-- Probiere andere Förderarten (z.B. wenn bisher Zuschüsse: jetzt Kredite/Bürgschaften)
-- Schaue bei spezialisierten Förderbanken und Ministerien die noch nicht erwähnt wurden
-- Gib NIEMALS dieselben Programme wie zuvor zurück\n`
+    ? `\nDER NUTZER IST UNZUFRIEDEN — suche bei ANDEREN Quellen, mit ANDEREN Stichwörtern. Probiere andere Förderarten. Gib NIEMALS dieselben Programme wie zuvor zurück.\n`
     : "";
 
-  return `Heute ist der ${TODAY}. Recherchiere aktuell aktive Förderprogramme in Deutschland.
-${exclusionBlock}${diversityInstruction}
-UNTERNEHMENSPROFIL:
-${formatProfile(profile)}
+  // Build a focused, minimal prompt
+  let prompt = `Heute ist der ${TODAY}. Recherchiere aktuelle Förderprogramme in Deutschland.\n`;
 
-AKTIVE FILTER:
-${formatFilters(filters)}
+  // STRICT region instruction — most important constraint
+  if (effectiveRegion && effectiveRegion !== "Bundesweit") {
+    prompt += `\n⚠️ REGION-EINSCHRÄNKUNG (STRIKT EINHALTEN):
+Zeige NUR Programme die in "${effectiveRegion}" ODER bundesweit verfügbar sind.
+Programme die NUR in anderen Bundesländern gelten, NIEMALS anzeigen!
+Bei jedem Programm MUSS das Feld "Region" entweder "${effectiveRegion}" oder "Bundesweit" sein.\n`;
+  }
 
-BISHERIGE KONVERSATION:
-${formatHistory(history)}
+  prompt += `${exclusionBlock}${diversityInstruction}`;
 
-AKTUELLE NUTZERANFRAGE:
-${message}
+  prompt += `\nSUCHANFRAGE: ${message}\n`;
 
-Finde maximal 8 passende, aktuell aktive Förderprogramme. Nenne für jedes Programm: Name, Beschreibung, Förderhöhe, Zielgruppe, Region, Frist, Förderart, Quelle und die EXAKTE URL der offiziellen Programmseite.`;
+  // Only include minimal, search-relevant context — NO company name, employees, revenue
+  const contextParts: string[] = [];
+  if (foerderbereich) contextParts.push(`Förderbereich: ${foerderbereich}`);
+  if (profile?.groesse) contextParts.push(`Unternehmensgröße: ${profile.groesse}`);
+  if (profile?.vorhaben) contextParts.push(`Vorhaben: ${profile.vorhaben}`);
+  if (profile?.branche) contextParts.push(`Branche: ${profile.branche}`);
+  if (filters?.foerderart && filters.foerderart !== "Alle auswählen") {
+    contextParts.push(`Bevorzugte Förderart: ${filters.foerderart}`);
+  }
+
+  if (contextParts.length > 0) {
+    prompt += `\nKONTEXT:\n${contextParts.map((p) => `- ${p}`).join("\n")}\n`;
+  }
+
+  if (history && history.length > 0) {
+    prompt += `\nBISHERIGE KONVERSATION:\n${formatHistory(history)}\n`;
+  }
+
+  prompt += `\nFinde 5-8 passende Förderprogramme. Für jedes Programm nenne: Name, Beschreibung, Förderhöhe, Zielgruppe, Region, Frist, Förderart, Quelle und die URL der offiziellen Programmseite.`;
+
+  return prompt;
 }
 
 // ── Link validation & verification ──────────────────────────────────

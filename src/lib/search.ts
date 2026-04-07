@@ -481,11 +481,54 @@ export function getLinkWarning(program: Foerderprogramm): string | undefined {
   return undefined;
 }
 
+const REGION_BUNDESWEIT_KEYWORDS = ["bundesweit", "deutschlandweit", "deutschland", "bund", "national"];
+
+function normalizeRegionName(value: string): string {
+  const norm = normalizeText(value);
+  // Map common abbreviations to full names
+  const regionMap: Record<string, string> = {
+    nrw: "nordrhein westfalen",
+    bw: "baden wurttemberg",
+    "baden wuerttemberg": "baden wurttemberg",
+    by: "bayern",
+    be: "berlin",
+    bb: "brandenburg",
+    hb: "bremen",
+    hh: "hamburg",
+    he: "hessen",
+    mv: "mecklenburg vorpommern",
+    ni: "niedersachsen",
+    rp: "rheinland pfalz",
+    sl: "saarland",
+    sn: "sachsen",
+    st: "sachsen anhalt",
+    sh: "schleswig holstein",
+    th: "thuringen",
+  };
+  return regionMap[norm] || norm;
+}
+
+function isBundesweit(region: string): boolean {
+  const norm = normalizeText(region);
+  return REGION_BUNDESWEIT_KEYWORDS.some((kw) => norm.includes(kw));
+}
+
 function matchesRegion(programRegion: string, filterRegion: string): boolean {
   if (!isActiveFilter(filterRegion)) return true;
-  if (!programRegion) return false;
-  if (filterRegion === "Bundesweit") return programRegion === "Bundesweit";
-  return programRegion === filterRegion || programRegion === "Bundesweit";
+  // Programs with unknown region: allow them through (especially for web results)
+  if (!programRegion) return true;
+
+  const normProgram = normalizeRegionName(programRegion);
+  const normFilter = normalizeRegionName(filterRegion);
+
+  // Bundesweit programs match any region filter
+  if (isBundesweit(programRegion)) return true;
+
+  // If filter is Bundesweit, only show bundesweit programs
+  if (isBundesweit(filterRegion)) return isBundesweit(programRegion);
+
+  // Fuzzy matching: check if either contains the other
+  return normProgram.includes(normFilter) || normFilter.includes(normProgram);
 }
 
 function matchesBranche(program: Foerderprogramm, branche: string): boolean {
@@ -523,18 +566,21 @@ function matchesFilters(
 
   if (!matchesRegion(program.region || "", filters.region)) return false;
 
-  if (
-    isActiveFilter(filters.foerderbereich) &&
-    normalizeText(program.foerderbereich) !== normalizeText(filters.foerderbereich)
-  ) {
-    return false;
+  if (isActiveFilter(filters.foerderbereich) && program.foerderbereich) {
+    const normProgram = normalizeText(program.foerderbereich);
+    const normFilter = normalizeText(filters.foerderbereich);
+    // Fuzzy: allow partial match (e.g. "Digitalisierung" matches "Digitalisierung und IT")
+    if (!normProgram.includes(normFilter) && !normFilter.includes(normProgram)) {
+      return false;
+    }
   }
 
-  if (
-    isActiveFilter(filters.foerderart) &&
-    normalizeText(program.foerderart) !== normalizeText(filters.foerderart)
-  ) {
-    return false;
+  if (isActiveFilter(filters.foerderart) && program.foerderart) {
+    const normProgram = normalizeText(program.foerderart);
+    const normFilter = normalizeText(filters.foerderart);
+    if (!normProgram.includes(normFilter) && !normFilter.includes(normProgram)) {
+      return false;
+    }
   }
 
   if (!matchesSize(program, filters.unternehmensgroesse)) return false;
@@ -585,12 +631,17 @@ export function scoreProgramList({
 
       if (effectiveRegion) {
         maxPossible += 25;
-        if (program.region === effectiveRegion) {
-          score += 25;
-          reasons.push({ label: `Verfügbar in ${effectiveRegion}`, matched: true });
-        } else if (program.region === "Bundesweit") {
+        const normProgramRegion = normalizeRegionName(program.region || "");
+        const normEffectiveRegion = normalizeRegionName(effectiveRegion);
+        if (isBundesweit(program.region || "")) {
           score += 20;
           reasons.push({ label: "Bundesweit verfügbar", matched: true });
+        } else if (
+          normProgramRegion.includes(normEffectiveRegion) ||
+          normEffectiveRegion.includes(normProgramRegion)
+        ) {
+          score += 25;
+          reasons.push({ label: `Verfügbar in ${effectiveRegion}`, matched: true });
         }
       }
 
@@ -703,7 +754,9 @@ export function scoreProgramList({
         isActiveFilter(normalizedFilters.foerderbereich) ||
         isActiveFilter(normalizedFilters.foerderart);
 
-      return hasContext ? result.score >= 20 : true;
+      // Web results have less structured data → lower threshold
+      const minScore = source === "websuche" ? 10 : 20;
+      return hasContext ? result.score >= minScore : true;
     })
     .sort((a, b) => b.score - a.score)
     .slice(0, limit);

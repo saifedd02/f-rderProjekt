@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Förderprogramm-Finder — Technische Architektur</title>
+<style>
+  :root {
+    --blue-50: #eff6ff; --blue-100: #dbeafe; --blue-200: #bfdbfe;
+    --blue-400: #60a5fa; --blue-500: #3b82f6; --blue-600: #2563eb;
+    --blue-700: #1d4ed8; --blue-800: #1e40af; --blue-900: #1e3a5f;
+    --green-100: #dcfce7; --green-500: #22c55e; --green-700: #15803d;
+    --amber-100: #fef3c7; --amber-500: #f59e0b; --amber-700: #b45309;
+    --purple-100: #f3e8ff; --purple-500: #a855f7; --purple-700: #7e22ce;
+    --rose-100: #ffe4e6; --rose-500: #f43f5e; --rose-700: #be123c;
+    --cyan-100: #cffafe; --cyan-500: #06b6d4; --cyan-700: #0e7490;
+    --slate-50: #f8fafc; --slate-100: #f1f5f9; --slate-200: #e2e8f0;
+    --slate-300: #cbd5e1; --slate-400: #94a3b8; --slate-500: #64748b;
+    --slate-600: #475569; --slate-700: #334155; --slate-800: #1e293b;
+    --slate-900: #0f172a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: linear-gradient(135deg, var(--slate-900) 0%, var(--blue-900) 50%, var(--slate-900) 100%);
+    color: var(--slate-200); min-height: 100vh; overflow-x: hidden;
+  }
+
+  /* ── Hero ── */
+  .hero { text-align: center; padding: 60px 24px 40px; position: relative; }
+  .hero::after {
+    content: ''; position: absolute; bottom: 0; left: 10%; right: 10%; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--blue-500), transparent);
+  }
+  .hero h1 {
+    font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 800;
+    background: linear-gradient(135deg, var(--blue-400), var(--cyan-500));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    margin-bottom: 12px;
+  }
+  .hero p { color: var(--slate-400); font-size: 1.1rem; max-width: 700px; margin: 0 auto; }
+  .badge {
+    display: inline-block; margin-top: 16px; padding: 6px 16px;
+    background: rgba(59,130,246,.15); border: 1px solid rgba(59,130,246,.3);
+    border-radius: 20px; font-size: .85rem; color: var(--blue-400);
+  }
+
+  /* ── Tabs ── */
+  .tabs { display: flex; justify-content: center; gap: 8px; padding: 24px 16px 0; flex-wrap: wrap; }
+  .tab {
+    padding: 10px 20px; border-radius: 10px; cursor: pointer;
+    background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08);
+    color: var(--slate-400); font-size: .9rem; font-weight: 600; transition: all .25s;
+  }
+  .tab:hover { background: rgba(59,130,246,.12); color: var(--blue-400); }
+  .tab.active {
+    background: rgba(59,130,246,.2); border-color: var(--blue-500);
+    color: #fff; box-shadow: 0 0 20px rgba(59,130,246,.15);
+  }
+
+  /* ── Sections ── */
+  .sections { max-width: 1200px; margin: 0 auto; padding: 32px 20px 80px; }
+  .section { display: none; animation: fadeUp .4s ease; }
+  .section.active { display: block; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  .section-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; color: #fff; }
+  .section-sub { color: var(--slate-400); margin-bottom: 28px; font-size: .95rem; }
+
+  /* ── Mindmap ── */
+  .mindmap { position: relative; min-height: 600px; display: flex; align-items: center; justify-content: center; }
+  .mm-center {
+    width: 200px; height: 200px; border-radius: 50%;
+    background: radial-gradient(circle, var(--blue-600), var(--blue-800));
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; color: #fff; font-weight: 700; font-size: 1rem;
+    box-shadow: 0 0 60px rgba(59,130,246,.35);
+    position: relative; z-index: 2; text-align: center; line-height: 1.3;
+    border: 3px solid var(--blue-400);
+  }
+  .mm-branches { position: absolute; inset: 0; }
+  .mm-branch {
+    position: absolute; width: 220px;
+    background: rgba(15,23,42,.85); border-radius: 16px; padding: 18px;
+    border: 1px solid rgba(255,255,255,.1); backdrop-filter: blur(12px);
+    transition: transform .25s, box-shadow .25s; cursor: default;
+  }
+  .mm-branch:hover { transform: scale(1.04); box-shadow: 0 8px 32px rgba(0,0,0,.4); }
+  .mm-branch .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+  .mm-branch h3 { font-size: .9rem; font-weight: 700; color: #fff; margin-bottom: 6px; display: flex; align-items: center; }
+  .mm-branch p { font-size: .78rem; color: var(--slate-400); line-height: 1.45; }
+  .mm-b1 { top: 10px; left: 50%; transform: translateX(-50%); }
+  .mm-b2 { top: 80px; right: 20px; }
+  .mm-b3 { bottom: 80px; right: 20px; }
+  .mm-b4 { bottom: 10px; left: 50%; transform: translateX(-50%); }
+  .mm-b5 { bottom: 80px; left: 20px; }
+  .mm-b6 { top: 80px; left: 20px; }
+  @media (max-width: 900px) {
+    .mindmap { flex-direction: column; min-height: auto; gap: 16px; padding-top: 220px; }
+    .mm-center { width: 160px; height: 160px; font-size: .85rem; position: absolute; top: 16px; left: 50%; transform: translateX(-50%); }
+    .mm-branches { position: static; display: flex; flex-direction: column; gap: 12px; }
+    .mm-branch { position: static !important; width: 100% !important; transform: none !important; }
+  }
+  .mm-lines { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+  .mm-lines line { stroke: var(--blue-500); stroke-width: 2; opacity: .25; stroke-dasharray: 6 4; }
+
+  /* ── Flow ── */
+  .flow { display: flex; flex-direction: column; gap: 0; align-items: center; }
+  .flow-step {
+    width: 100%; max-width: 720px; padding: 24px; border-radius: 16px;
+    background: rgba(15,23,42,.7); border: 1px solid rgba(255,255,255,.08);
+    backdrop-filter: blur(8px); position: relative;
+  }
+  .flow-step h3 { font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: 6px; }
+  .flow-step p { font-size: .85rem; color: var(--slate-400); line-height: 1.55; }
+  .flow-arrow { width: 2px; height: 36px; background: var(--blue-500); position: relative; }
+  .flow-arrow::after {
+    content: ''; position: absolute; bottom: -5px; left: -5px;
+    border-left: 6px solid transparent; border-right: 6px solid transparent;
+    border-top: 8px solid var(--blue-500);
+  }
+  .flow-num {
+    position: absolute; top: -12px; left: -12px;
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .75rem; font-weight: 800; color: #fff;
+  }
+  .step-blue .flow-num { background: var(--blue-600); }
+  .step-purple .flow-num { background: var(--purple-500); }
+  .step-green .flow-num { background: var(--green-500); }
+  .step-amber .flow-num { background: var(--amber-500); }
+  .step-cyan .flow-num { background: var(--cyan-500); }
+  .step-rose .flow-num { background: var(--rose-500); }
+
+  /* ── Cards ── */
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+  .card {
+    background: rgba(15,23,42,.75); border: 1px solid rgba(255,255,255,.08);
+    border-radius: 16px; padding: 24px; backdrop-filter: blur(8px);
+    transition: transform .2s, border-color .2s;
+  }
+  .card:hover { transform: translateY(-4px); border-color: rgba(59,130,246,.3); }
+  .card h3 { font-size: .95rem; font-weight: 700; color: #fff; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .card p { font-size: .83rem; color: var(--slate-400); line-height: 1.5; }
+  .card .tag {
+    display: inline-block; padding: 3px 10px; border-radius: 8px;
+    font-size: .72rem; font-weight: 600; margin-top: 8px; margin-right: 4px;
+  }
+  .tag-blue { background: var(--blue-100); color: var(--blue-700); }
+  .tag-green { background: var(--green-100); color: var(--green-700); }
+  .tag-amber { background: var(--amber-100); color: var(--amber-700); }
+  .tag-purple { background: var(--purple-100); color: var(--purple-700); }
+  .tag-cyan { background: var(--cyan-100); color: var(--cyan-700); }
+  .tag-rose { background: var(--rose-100); color: var(--rose-700); }
+
+  /* ── Score Bars ── */
+  .score-breakdown { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 680px; margin: 0 auto; }
+  @media (max-width: 600px) { .score-breakdown { grid-template-columns: 1fr; } }
+  .score-bar-wrap { background: rgba(15,23,42,.7); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 16px; }
+  .score-bar-label { font-size: .82rem; font-weight: 600; color: var(--slate-300); margin-bottom: 8px; display: flex; justify-content: space-between; }
+  .score-bar { height: 10px; border-radius: 5px; background: rgba(255,255,255,.08); overflow: hidden; }
+  .score-bar-fill { height: 100%; border-radius: 5px; transition: width 1s ease; }
+  .fill-blue { background: linear-gradient(90deg, var(--blue-500), var(--cyan-500)); }
+  .fill-green { background: linear-gradient(90deg, var(--green-500), #4ade80); }
+  .fill-amber { background: linear-gradient(90deg, var(--amber-500), #fbbf24); }
+  .fill-purple { background: linear-gradient(90deg, var(--purple-500), #c084fc); }
+  .fill-rose { background: linear-gradient(90deg, var(--rose-500), #fb7185); }
+  .fill-cyan { background: linear-gradient(90deg, var(--cyan-500), #22d3ee); }
+
+  /* ── Stack Chips ── */
+  .stack-row { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-bottom: 24px; }
+  .stack-chip {
+    padding: 10px 20px; border-radius: 12px;
+    background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+    font-size: .85rem; font-weight: 600; color: var(--slate-300);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .stack-chip .dot-lg { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* ── Dataflow ── */
+  .dataflow { display: flex; align-items: stretch; gap: 0; justify-content: center; flex-wrap: wrap; margin: 20px 0; }
+  .df-box { flex: 1 1 160px; max-width: 200px; padding: 20px 14px; text-align: center; border-radius: 14px; }
+  .df-box h4 { font-size: .82rem; font-weight: 700; margin-bottom: 4px; }
+  .df-box p { font-size: .72rem; line-height: 1.4; }
+  .df-arrow-h { width: 40px; display: flex; align-items: center; justify-content: center; color: var(--blue-400); font-size: 1.4rem; flex-shrink: 0; }
+  .df-blue { background: rgba(59,130,246,.12); border: 1px solid rgba(59,130,246,.25); color: var(--blue-200); }
+  .df-purple { background: rgba(168,85,247,.12); border: 1px solid rgba(168,85,247,.25); color: var(--purple-200); }
+  .df-green { background: rgba(34,197,94,.12); border: 1px solid rgba(34,197,94,.25); color: var(--green-200); }
+  .df-amber { background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.25); color: var(--amber-100); }
+  .df-cyan { background: rgba(6,182,212,.12); border: 1px solid rgba(6,182,212,.25); color: var(--cyan-100); }
+
+  /* ── Deep-Dive Specific ── */
+  .pipeline-block {
+    max-width: 720px; margin: 0 auto 20px; padding: 28px;
+    background: rgba(15,23,42,.75); border-radius: 16px;
+    border: 1px solid rgba(255,255,255,.08); backdrop-filter: blur(8px);
+  }
+  .pipeline-block h3 { font-size: 1.05rem; font-weight: 700; color: #fff; margin-bottom: 10px; }
+  .pipeline-block h4 { font-size: .88rem; font-weight: 700; color: var(--slate-200); margin: 14px 0 6px; }
+  .pipeline-block p { font-size: .83rem; color: var(--slate-400); line-height: 1.6; }
+  .pipeline-block code { background: rgba(59,130,246,.12); padding: 2px 6px; border-radius: 4px; font-size: .78rem; color: var(--blue-300); }
+  .pipeline-block .code-block {
+    background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.06);
+    border-radius: 10px; padding: 14px 18px; margin: 10px 0;
+    font-family: 'SF Mono', 'Fira Code', monospace; font-size: .76rem;
+    color: var(--slate-300); line-height: 1.6; overflow-x: auto; white-space: pre;
+  }
+  .pipeline-block .code-block .kw { color: var(--purple-500); }
+  .pipeline-block .code-block .fn { color: var(--blue-400); }
+  .pipeline-block .code-block .str { color: var(--green-500); }
+  .pipeline-block .code-block .cmt { color: var(--slate-500); font-style: italic; }
+  .pipeline-block .code-block .val { color: var(--amber-500); }
+
+  .split-flow {
+    display: grid; grid-template-columns: 1fr 40px 1fr; gap: 0; align-items: start;
+    max-width: 720px; margin: 0 auto 20px;
+  }
+  @media (max-width: 700px) { .split-flow { grid-template-columns: 1fr; gap: 16px; } .split-or { display: none; } }
+  .split-or {
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; color: var(--slate-500); font-size: .85rem; padding-top: 60px;
+  }
+  .split-box {
+    padding: 24px; border-radius: 16px;
+    background: rgba(15,23,42,.75); border: 1px solid rgba(255,255,255,.08);
+    backdrop-filter: blur(8px);
+  }
+  .split-box h3 { font-size: .95rem; font-weight: 700; color: #fff; margin-bottom: 8px; }
+  .split-box p { font-size: .8rem; color: var(--slate-400); line-height: 1.55; }
+  .split-box.path-a { border-top: 3px solid var(--green-500); }
+  .split-box.path-b { border-top: 3px solid var(--amber-500); }
+
+  .verification-grid {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;
+    max-width: 720px; margin: 16px auto;
+  }
+  @media (max-width: 700px) { .verification-grid { grid-template-columns: 1fr; } }
+  .v-step {
+    padding: 18px; border-radius: 12px; text-align: center;
+    background: rgba(15,23,42,.7); border: 1px solid rgba(255,255,255,.08);
+  }
+  .v-step h4 { font-size: .82rem; font-weight: 700; color: #fff; margin-bottom: 4px; }
+  .v-step p { font-size: .75rem; color: var(--slate-400); line-height: 1.4; }
+  .v-step .v-icon { font-size: 1.4rem; margin-bottom: 6px; display: block; color: var(--slate-300); }
+
+  footer {
+    text-align: center; padding: 40px 20px; color: var(--slate-500);
+    font-size: .8rem; border-top: 1px solid rgba(255,255,255,.05);
+  }
+
+  .mt-20 { margin-top: 20px; }
+  .mb-12 { margin-bottom: 12px; }
+  .muted { color: var(--slate-500); }
+  .highlight { color: var(--blue-400); font-weight: 600; }
+  .list-inside { padding-left: 18px; }
+  .list-inside li { font-size: .83rem; color: var(--slate-400); line-height: 1.7; }
+  .list-inside li strong { color: var(--slate-200); }
+
+  .sep { width: 100%; max-width: 720px; height: 1px; margin: 28px auto; background: linear-gradient(90deg, transparent, var(--slate-600), transparent); }
+</style>
+</head>
+<body>
+
+<!-- ═══════ HERO ═══════ -->
+<div class="hero">
+  <h1>Förderprogramm-Finder 1.1</h1>
+  <p>Technische Architektur und Funktionsweise — interaktive Dokumentation</p>
+  <span class="badge">Next.js 14 &bull; React 18 &bull; Gemini &bull; Perplexity &bull; TypeScript</span>
+</div>
+
+<!-- ═══════ TABS ═══════ -->
+<div class="tabs">
+  <div class="tab active" data-tab="overview">Übersicht</div>
+  <div class="tab" data-tab="mindmap">Mindmap</div>
+  <div class="tab" data-tab="flow">Such-Pipeline</div>
+  <div class="tab" data-tab="deepdive">Quellen-Pipeline</div>
+  <div class="tab" data-tab="scoring">Scoring</div>
+  <div class="tab" data-tab="components">Komponenten</div>
+  <div class="tab" data-tab="data">Datenquellen</div>
+  <div class="tab" data-tab="stack">Tech-Stack</div>
+</div>
+
+<div class="sections">
+
+<!-- ═══════ 1. ÜBERSICHT ═══════ -->
+<div class="section active" id="overview">
+  <h2 class="section-title">Was macht der Förderprogramm-Finder?</h2>
+  <p class="section-sub">Ein KI-gestützter Chatbot, der deutsche Unternehmen mit passenden Förderprogrammen zusammenbringt.</p>
+
+  <div class="dataflow">
+    <div class="df-box df-blue"><h4>1. Profil eingeben</h4><p>Branche, Region, Größe, Vorhaben</p></div>
+    <div class="df-arrow-h">&rarr;</div>
+    <div class="df-box df-purple"><h4>2. Frage stellen</h4><p>Nutzer schreibt im Chat was er sucht</p></div>
+    <div class="df-arrow-h">&rarr;</div>
+    <div class="df-box df-green"><h4>3. KI-Suche</h4><p>Perplexity + Gemini + lokale DB durchsuchen</p></div>
+    <div class="df-arrow-h">&rarr;</div>
+    <div class="df-box df-amber"><h4>4. Scoring</h4><p>Jedes Programm bewertet (0–100 Punkte)</p></div>
+    <div class="df-arrow-h">&rarr;</div>
+    <div class="df-box df-cyan"><h4>5. Ergebnis</h4><p>Top 8 als verifizierte Karten</p></div>
+  </div>
+
+  <div class="card-grid mt-20">
+    <div class="card">
+      <h3>Chat-Interface</h3>
+      <p>Nutzer interagieren natürlich per Chat. Mehrere Sitzungen werden gespeichert. Follow-up-Fragen werden erkannt und diversere Ergebnisse geliefert.</p>
+    </div>
+    <div class="card">
+      <h3>Hybride KI-Suche</h3>
+      <p>Kombination aus <strong>lokaler Datenbank</strong> (~100 Programme) und <strong>Echtzeit-Websuche</strong> via Perplexity API. Gemini dient als Fallback und JSON-Formatierer.</p>
+    </div>
+    <div class="card">
+      <h3>Intelligentes Scoring</h3>
+      <p>6 Dimensionen (Region, Größe, Branche, Bereich, Art, Text) ergeben einen Score von 0–100. Fuzzy-Matching für Region und Förderbereich. Web-Programme ab 10 Punkten, DB-Programme ab 20.</p>
+    </div>
+    <div class="card">
+      <h3>Link-Verifikation</h3>
+      <p>30+ vertrauenswürdige Domains (KfW, BAFA, BMWK, Landesbanken). Jede URL wird per HEAD-Request geprüft. Warnungen bei nicht erreichbaren Links.</p>
+    </div>
+    <div class="card">
+      <h3>Lokale Speicherung</h3>
+      <p>Profil, Chat-Verläufe und Favoriten werden im <strong>localStorage</strong> des Browsers gespeichert. Kein Account nötig, kein Server-Speicher.</p>
+    </div>
+    <div class="card">
+      <h3>Excel-Export</h3>
+      <p>Favorisierte Programme können als <strong>.xlsx-Datei</strong> exportiert werden — bereit für Meetings und Präsentationen.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ 2. MINDMAP ═══════ -->
+<div class="section" id="mindmap">
+  <h2 class="section-title">Architektur-Mindmap</h2>
+  <p class="section-sub">Die 6 Kernbereiche des Systems auf einen Blick.</p>
+
+  <div class="mindmap">
+    <svg class="mm-lines" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet">
+      <line x1="500" y1="240" x2="500" y2="80"/>
+      <line x1="570" y1="270" x2="780" y2="160"/>
+      <line x1="570" y1="330" x2="780" y2="440"/>
+      <line x1="500" y1="360" x2="500" y2="520"/>
+      <line x1="430" y1="330" x2="220" y2="440"/>
+      <line x1="430" y1="270" x2="220" y2="160"/>
+    </svg>
+    <div class="mm-center">Förderprogramm-<br>Finder 1.1</div>
+    <div class="mm-branches">
+      <div class="mm-branch mm-b1">
+        <h3><span class="dot" style="background:var(--blue-400)"></span> Frontend (React)</h3>
+        <p>Chat-Interface, Filter-Panel, Programm-Karten, Onboarding-Wizard, Favoriten-Verwaltung</p>
+      </div>
+      <div class="mm-branch mm-b2">
+        <h3><span class="dot" style="background:var(--purple-500)"></span> API-Backend</h3>
+        <p>/api/chat — Hauptsuche<br>/api/program-chat — Programmdetails<br>Next.js API Routes (serverless)</p>
+      </div>
+      <div class="mm-branch mm-b3">
+        <h3><span class="dot" style="background:var(--green-500)"></span> KI-Services</h3>
+        <p>Perplexity (Websuche) als Primär,<br>Gemini (Grounding + JSON) als Fallback und Formatierer</p>
+      </div>
+      <div class="mm-branch mm-b4">
+        <h3><span class="dot" style="background:var(--amber-500)"></span> Scoring-Engine</h3>
+        <p>6-Dimensionen-Bewertung, Keyword-Extraktion, Alias-Auflösung, Frist-Erkennung</p>
+      </div>
+      <div class="mm-branch mm-b5">
+        <h3><span class="dot" style="background:var(--cyan-500)"></span> Datenquellen</h3>
+        <p>Lokale DB (~100 Programme),<br>Web-Ergebnisse + Merge-Logik,<br>Vertrauens-Stufen (hoch/mittel/niedrig)</p>
+      </div>
+      <div class="mm-branch mm-b6">
+        <h3><span class="dot" style="background:var(--rose-500)"></span> Speicherung</h3>
+        <p>localStorage: Profil, Sitzungen, Favoriten.<br>Kein Server-seitiger Speicher. Excel-Export möglich.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ 3. SUCH-PIPELINE ═══════ -->
+<div class="section" id="flow">
+  <h2 class="section-title">Such-Pipeline: Schritt für Schritt</h2>
+  <p class="section-sub">Was passiert, wenn der Nutzer eine Frage stellt?</p>
+
+  <div class="flow">
+    <div class="flow-step step-blue">
+      <span class="flow-num">1</span>
+      <h3>Prompt zusammenbauen</h3>
+      <p>Nur die suchrelevanten Daten (Region, Branche, Vorhaben, Größe) werden in den Prompt gepackt — <strong>kein Firmenname, keine Mitarbeiterzahl, kein Umsatz</strong>. Bei gesetztem Region-Filter wird eine <strong>strikte Region-Einschränkung</strong> eingefügt, damit nur Programme aus dem gewählten Bundesland + bundesweite Programme zurückkommen.<br><br><strong>Datei:</strong> <code>/api/chat/route.ts</code> — <code>buildSearchPrompt()</code></p>
+    </div>
+    <div class="flow-arrow"></div>
+    <div class="flow-step step-purple">
+      <span class="flow-num">2</span>
+      <h3>Unzufriedenheit erkennen</h3>
+      <p>Pattern-Matching erkennt Ausdrücke wie "andere Programme", "das passt nicht", "mehr Ergebnisse". Bei Unzufriedenheit wird die <strong>Temperatur auf 0.7 erhöht</strong> für diversere Ergebnisse und bereits gezeigte Programme ausgeschlossen.</p>
+    </div>
+    <div class="flow-arrow"></div>
+    <div class="flow-step step-green">
+      <span class="flow-num">3</span>
+      <h3>KI-Suche: Perplexity (primär)</h3>
+      <p>Die Anfrage geht an die <strong>Perplexity API</strong> (Modell: <code>sonar-pro</code>) mit aktivierter Websuche. Die Antwort enthält Fließtext + Quellen-URLs (Citations).<br><br><strong>Datei:</strong> <code>/lib/perplexity.ts</code></p>
+    </div>
+    <div class="flow-arrow"></div>
+    <div class="flow-step step-amber">
+      <span class="flow-num">4</span>
+      <h3>Fallback: Gemini + JSON-Formatierung</h3>
+      <p>Falls Perplexity fehlschlägt, wird <strong>Gemini 2.5 Flash</strong> mit Google Search Grounding benutzt. In beiden Fällen konvertiert Gemini die Rohdaten in ein <strong>strukturiertes JSON-Schema</strong> mit Name, Beschreibung, Förderbereich, Link etc.<br><br><strong>Datei:</strong> <code>/lib/gemini.ts</code></p>
+    </div>
+    <div class="flow-arrow"></div>
+    <div class="flow-step step-cyan">
+      <span class="flow-num">5</span>
+      <h3>Link-Verifikation</h3>
+      <p>Jede URL wird gegen eine <strong>Whitelist von 30+ vertrauenswürdigen Domains</strong> geprüft (KfW, BAFA, BMWK, Landesbanken, EU-Portale). Zusätzlich wird ein <strong>HEAD-Request</strong> (4s Timeout) ausgeführt, um die Erreichbarkeit zu verifizieren.<br><br><strong>Funktion:</strong> <code>mapAndVerifyPrograms()</code></p>
+    </div>
+    <div class="flow-arrow"></div>
+    <div class="flow-step step-rose">
+      <span class="flow-num">6</span>
+      <h3>Scoring und Ranking</h3>
+      <p>Jedes Programm wird mit dem Nutzerprofil abgeglichen und erhält einen <strong>Score von 0–100</strong>. Programme unter 10 Punkten (Web) bzw. 20 Punkten (Datenbank) werden gefiltert. <strong>Region-Matching ist fuzzy</strong> (NRW = Nordrhein-Westfalen). Die <strong>Top 8</strong> nach Score sortiert zurückgegeben. Duplikate werden gemergt.<br><br><strong>Datei:</strong> <code>/lib/search.ts</code> — <code>scoreProgramList()</code></p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ 4. QUELLEN-PIPELINE (NEU — DEEP DIVE) ═══════ -->
+<div class="section" id="deepdive">
+  <h2 class="section-title">Quellen-Pipeline: Woher kommen die Programme und URLs?</h2>
+  <p class="section-sub">Der komplette Weg eines Förderprogramms — von der KI-Suche bis zur Anzeige mit verifizierten Quellen-Links.</p>
+
+  <!-- Phase 1: Two search paths -->
+  <div class="pipeline-block" style="border-top: 3px solid var(--blue-400);">
+    <h3>Phase 1 — Suchanfrage an die KI-APIs</h3>
+    <p>Das System hat <strong>zwei Suchstrategien</strong>. Perplexity ist der Primärweg, Gemini der Fallback. Es wird nie beides gleichzeitig benutzt.</p>
+  </div>
+
+  <div class="split-flow">
+    <div class="split-box path-a">
+      <h3>Weg A: Perplexity API</h3>
+      <p><strong>Modell:</strong> <code>sonar-pro</code><br>
+      <strong>Parameter:</strong> <code>web_search: true</code></p>
+      <p style="margin-top:10px">Das System schickt zwei Nachrichten an Perplexity:</p>
+      <p style="margin-top:8px"><strong>1. System-Nachricht:</strong> Instruiert Perplexity als Recherche-Experten. Muss mindestens 5 Programme finden. Durchsucht foerderdatenbank.de, KfW, BAFA, BMWK, Landesförderbanken, ZIM, go-digital etc. Darf NIEMALS "nichts gefunden" sagen.</p>
+      <p style="margin-top:8px"><strong>2. User-Nachricht:</strong> Fokussierter Prompt mit Suchanfrage, strikter Region-Einschränkung und minimalem Kontext (nur Branche, Größe, Vorhaben — kein Firmenname/Umsatz/Mitarbeiter).</p>
+      <p style="margin-top:12px"><strong>Was kommt zurück:</strong></p>
+      <div class="code-block"><span class="cmt">// Perplexity Response</span>
+{
+  <span class="str">"text"</span>: <span class="str">"Hier sind passende Programme:
+    1. KfW-Digitalisierungskredit..."</span>,
+  <span class="str">"citations"</span>: [
+    <span class="str">"https://www.kfw.de/inlandsf..."</span>,
+    <span class="str">"https://www.foerderdatenbank..."</span>,
+    <span class="str">"https://www.bmwk.de/..."</span>
+  ]
+}</div>
+      <p>Die <strong>citations</strong> sind echte URLs, die Perplexity beim Durchsuchen des Internets gefunden und als Quelle verwendet hat. Diese werden später zur Link-Verifikation genutzt.</p>
+    </div>
+
+    <div class="split-or">ODER</div>
+
+    <div class="split-box path-b">
+      <h3>Weg B: Gemini (Fallback)</h3>
+      <p><strong>Modell:</strong> <code>gemini-2.5-flash</code><br>
+      <strong>Tool:</strong> <code>google_search</code></p>
+      <p style="margin-top:10px">Gemini arbeitet in <strong>zwei Durchgängen</strong>:</p>
+      <p style="margin-top:8px"><strong>Durchgang 1 — Grounded Search:</strong> Gemini bekommt Zugang zum Google-Search-Tool und sucht aktiv im Web. Die Antwort kommt als <strong>Fließtext</strong> (kein JSON, weil Gemini im Grounding-Modus kein zuverlässiges JSON liefert).</p>
+      <p style="margin-top:8px">Die URLs stecken in den <strong>Grounding-Metadaten</strong>:</p>
+      <div class="code-block"><span class="cmt">// Gemini Response Metadata</span>
+candidates[<span class="val">0</span>]
+  .groundingMetadata
+    .groundingChunks[]: [
+      { web: {
+          title: <span class="str">"KfW-Förderung"</span>,
+          uri: <span class="str">"https://www.kfw.de/..."</span>
+      }},
+      { web: {
+          title: <span class="str">"BAFA-Zuschuss"</span>,
+          uri: <span class="str">"https://www.bafa.de/..."</span>
+      }}
+    ]</div>
+      <p style="margin-top:8px"><strong>Durchgang 2 — JSON-Formatierung:</strong> Der Fließtext + die extrahierten URLs werden an Gemini geschickt (diesmal <strong>ohne</strong> Websuche) mit striktem JSON-Schema. Gemini extrahiert die Programme und gibt strukturiertes JSON zurück.</p>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- Phase 2: JSON Formatting -->
+  <div class="pipeline-block" style="border-top: 3px solid var(--purple-500);">
+    <h3>Phase 2 — Fließtext wird zu strukturiertem JSON</h3>
+    <p>Egal welcher Weg (A oder B) — am Ende muss der Fließtext in ein festes JSON-Schema umgewandelt werden. Das macht die Funktion <code>formatToJson()</code> in <code>gemini.ts</code>.</p>
+
+    <h4>Was in den Formatter reingeht:</h4>
+    <div class="code-block"><span class="cmt">// Input für formatToJson()</span>
+<span class="val">1.</span> Fließtext von Perplexity/Gemini (bereinigt)
+<span class="val">2.</span> Liste der Quellen-URLs (citations / grounding URLs)
+<span class="val">3.</span> JSON-Schema das die Ausgabe definiert</div>
+
+    <h4>Die entscheidende Anweisung an Gemini:</h4>
+    <p>Der Formatter bekommt die Quellen-URLs als <strong>"VERIFIZIERTE QUELLEN-URLS"</strong> und die klare Regel: <em>"Link = EXAKT aus den Quellen übernehmen ODER leer lassen. Niemals erfinden."</em></p>
+
+    <h4>Was rauskommt:</h4>
+    <div class="code-block"><span class="cmt">// formatToJson() Output</span>
+{
+  <span class="str">"reply"</span>: <span class="str">"Ich habe 5 Programme gefunden..."</span>,
+  <span class="str">"programs"</span>: [
+    {
+      <span class="str">"name"</span>: <span class="str">"KfW-Digitalisierungskredit"</span>,
+      <span class="str">"beschreibung"</span>: <span class="str">"Zinsgünstiger Kredit für..."</span>,
+      <span class="str">"foerderhoehe"</span>: <span class="str">"Bis 25.000 EUR"</span>,
+      <span class="str">"region"</span>: <span class="str">"Bundesweit"</span>,
+      <span class="str">"link"</span>: <span class="str">"https://www.kfw.de/inlandsf..."</span>,
+      <span class="str">"quelle"</span>: <span class="str">"KfW"</span>,
+      <span class="str">"foerderbereich"</span>: <span class="str">"Digitalisierung"</span>,
+      <span class="str">"foerderart"</span>: <span class="str">"Kredit / Darlehen"</span>,
+      <span class="str">"frist"</span>: <span class="str">"2026-12-31"</span>,
+      ...
+    }
+  ]
+}</div>
+    <p><strong>Sicherheitsmechanismus:</strong> Temperatur = 0 (komplett deterministisch) + striktes JSON-Schema erzwungen via <code>responseMimeType: "application/json"</code>. Das verhindert, dass Gemini kreativ wird.</p>
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- Phase 3: Link Verification -->
+  <div class="pipeline-block" style="border-top: 3px solid var(--cyan-500);">
+    <h3>Phase 3 — Link-Verifikation: mapAndVerifyPrograms()</h3>
+    <p>Jedes Programm aus Phase 2 durchläuft jetzt eine <strong>dreistufige Verifikation</strong>. Kein Link wird ungeprüft angezeigt.</p>
+  </div>
+
+  <div class="verification-grid">
+    <div class="v-step" style="border-top: 2px solid var(--green-500);">
+      <span class="v-icon">1</span>
+      <h4>Domain-Whitelist</h4>
+      <p><code>validateLink()</code> prüft ob die Domain in der Liste der <strong>30+ vertrauenswürdigen Domains</strong> steht. Unbekannte Domains werden sofort verworfen.</p>
+    </div>
+    <div class="v-step" style="border-top: 2px solid var(--blue-400);">
+      <span class="v-icon">2</span>
+      <h4>Citation-Matching</h4>
+      <p>Falls der direkte Link fehlt oder ungültig ist, sucht <code>matchCitationToProgram()</code> in den Quellen-URLs nach einem passenden Link. Es vergleicht Namens-Tokens des Programms mit den URLs.</p>
+    </div>
+    <div class="v-step" style="border-top: 2px solid var(--amber-500);">
+      <span class="v-icon">3</span>
+      <h4>HEAD-Request</h4>
+      <p><code>verifyUrl()</code> macht einen echten HTTP-Aufruf (HEAD, 4s Timeout). Nur wenn der Server mit Status 200-399 antwortet, gilt der Link als erreichbar. Alle Links werden <strong>parallel</strong> geprüft.</p>
+    </div>
+  </div>
+
+  <div class="pipeline-block">
+    <h4>Citation-Matching im Detail</h4>
+    <p>Wie findet das System den richtigen Link für ein Programm?</p>
+    <div class="code-block"><span class="cmt">// Beispiel: Programm "KfW-Digitalisierungskredit"</span>
+
+<span class="val">1.</span> Name wird normalisiert und in Tokens zerlegt:
+   <span class="str">"kfw"</span>, <span class="str">"digitalisierungskredit"</span>
+
+<span class="val">2.</span> Jede Citation-URL wird geprüft:
+   <span class="str">"https://www.kfw.de/inlandsfoerderung/Digital..."</span>
+    &rarr; URL enthält <span class="str">"kfw"</span>? <span class="fn">JA</span>
+    &rarr; validateLink() = Domain kfw.de ist trusted? <span class="fn">JA</span>
+    &rarr; <span class="fn">MATCH</span> — diese URL wird dem Programm zugewiesen
+
+<span class="val">3.</span> Alternativ: Auch die Quelle (<span class="str">"KfW"</span>) wird gegen URLs geprüft</div>
+
+    <h4>Was passiert wenn kein Link gefunden wird?</h4>
+    <p>Das Programm wird trotzdem angezeigt, aber <strong>ohne Link</strong> und mit einer <strong>Link-Warnung</strong> (orangefarbener Hinweis in der ProgramCard). Der Nutzer sieht dann: "Link konnte nicht verifiziert werden".</p>
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- Phase 4: sourceUrls -->
+  <div class="pipeline-block" style="border-top: 3px solid var(--rose-500);">
+    <h3>Phase 4 — Quellen-URLs für die Anzeige (sourceUrls)</h3>
+    <p>Neben dem direkten Programm-Link gibt es die <strong>sourceUrls</strong> — das sind die Quellen, die die KI bei der Suche verwendet hat. Diese werden dem Nutzer separat angezeigt.</p>
+
+    <h4>Woher kommen die sourceUrls?</h4>
+    <ul class="list-inside" style="margin-top:8px">
+      <li><strong>Bei Perplexity:</strong> Die <code>citations</code> aus der API-Antwort — echte URLs die Perplexity beim Websuchen als Quellen benutzt hat</li>
+      <li><strong>Bei Gemini:</strong> Die <code>groundingChunks[].web.uri</code> aus den Grounding-Metadaten — URLs die Google Search während der Antwortgenerierung gefunden hat</li>
+      <li><strong>Bei lokaler DB:</strong> Keine sourceUrls — die Programme kommen aus der eigenen Datenbank</li>
+    </ul>
+
+    <h4>Wie werden sie angezeigt?</h4>
+    <p>In der <code>ProgramCard.tsx</code> werden maximal <strong>3 sourceUrls</strong> in einem aufklappbaren "Quellen"-Bereich angezeigt. Jede URL ist ein klickbarer Link der in einem neuen Tab öffnet.</p>
+    <div class="code-block"><span class="cmt">// ProgramCard.tsx — Quellen-Anzeige</span>
+<span class="kw">if</span> (sourceUrls.length > <span class="val">0</span>) {
+  zeige Abschnitt <span class="str">"Quellen"</span>
+  <span class="kw">for each</span> url <span class="kw">in</span> sourceUrls.<span class="fn">slice</span>(<span class="val">0</span>, <span class="val">3</span>)
+    &rarr; Klickbarer Link mit target=<span class="str">"_blank"</span>
+}</div>
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- Phase 5: Final Assembly -->
+  <div class="pipeline-block" style="border-top: 3px solid var(--green-500);">
+    <h3>Phase 5 — Zusammenbau: Vom Rohdatum zur Programm-Karte</h3>
+    <p>Jedes Programm bekommt am Ende eine stabile ID und alle Felder werden bereinigt.</p>
+    <div class="code-block"><span class="cmt">// Finales ScoredProgram-Objekt</span>
+{
+  program: {
+    id: <span class="str">"web-kfw-digitalisierungskredit-kfw"</span>,  <span class="cmt">// slugified</span>
+    name: <span class="str">"KfW-Digitalisierungskredit"</span>,
+    link: <span class="str">"https://www.kfw.de/..."</span>,           <span class="cmt">// verifiziert</span>
+    quelle: <span class="str">"KfW"</span>,
+    ...
+  },
+  score: <span class="val">87</span>,                                    <span class="cmt">// 0-100</span>
+  source: <span class="str">"websuche"</span>,                           <span class="cmt">// oder "datenbank" / "hybrid"</span>
+  confidence: <span class="str">"medium"</span>,                         <span class="cmt">// web = medium, lokal = high</span>
+  sourceUrls: [<span class="str">"https://www.kfw.de/..."</span>, ...],  <span class="cmt">// Quellen</span>
+  reasons: [                                   <span class="cmt">// Match-Gründe</span>
+    { label: <span class="str">"Region: Bundesweit"</span>, matched: <span class="val">true</span> },
+    { label: <span class="str">"Branche: Industrie"</span>, matched: <span class="val">true</span> },
+    ...
+  ],
+  deadlineStatus: <span class="str">"active"</span>,
+  linkWarning: <span class="val">null</span>                             <span class="cmt">// oder Warnungstext</span>
+}</div>
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- Zusammenfassung als Flow -->
+  <div class="pipeline-block" style="background: rgba(59,130,246,.06); border: 1px solid rgba(59,130,246,.2);">
+    <h3>Zusammenfassung: Der komplette Weg</h3>
+    <div class="code-block" style="background: rgba(0,0,0,.3);">Nutzer-Frage
+  &darr;
+<span class="fn">buildSearchPrompt()</span> &rarr; Profil + Filter + Verlauf einbetten
+  &darr;
+<span class="fn">searchFoerderprogramme()</span> &rarr; Perplexity API (web_search: true)
+  &darr;                          &rarr; Antwort: Fließtext + citations[]
+  &darr;                          &rarr; Fallback: Gemini grounded search
+  &darr;
+<span class="fn">formatToJson()</span> &rarr; Gemini wandelt Fließtext in JSON um
+  &darr;                    &rarr; Nur Quellen-URLs als Links erlaubt
+  &darr;                    &rarr; Schema erzwungen, Temperatur = 0
+  &darr;
+<span class="fn">mapAndVerifyPrograms()</span>
+  &darr;  <span class="fn">validateLink()</span> &rarr; Domain in Whitelist?
+  &darr;  <span class="fn">matchCitationToProgram()</span> &rarr; URL aus Citations zuordnen
+  &darr;  <span class="fn">verifyUrl()</span> &rarr; HEAD-Request, 4s Timeout
+  &darr;
+<span class="fn">scoreProgramList()</span> &rarr; 6 Dimensionen bewerten (max 100)
+  &darr;                    &rarr; sourceUrls anhängen
+  &darr;                    &rarr; Filter: Score >= 20
+  &darr;
+<span class="fn">mergeScoredPrograms()</span> &rarr; Web + Lokal zusammenführen
+  &darr;                       &rarr; Duplikate erkennen (Name+Quelle+Region)
+  &darr;                       &rarr; Höherer Score gewinnt
+  &darr;
+Top 8 sortiert nach Score &rarr; <span class="fn">ProgramCard.tsx</span> im Frontend</div>
+  </div>
+</div>
+
+<!-- ═══════ 5. SCORING ═══════ -->
+<div class="section" id="scoring">
+  <h2 class="section-title">Scoring-Algorithmus</h2>
+  <p class="section-sub">Wie wird der Match-Score für jedes Programm berechnet? Maximal 100 Punkte, verteilt auf 6 Dimensionen.</p>
+
+  <div class="score-breakdown">
+    <div class="score-bar-wrap">
+      <div class="score-bar-label"><span>Region</span><strong>25 Pkt</strong></div>
+      <div class="score-bar"><div class="score-bar-fill fill-blue" style="width:25%"></div></div>
+      <p style="font-size:.75rem;color:var(--slate-500);margin-top:6px">Exakter Match = 25, "Bundesweit" = 20</p>
+    </div>
+    <div class="score-bar-wrap">
+      <div class="score-bar-label"><span>Unternehmensgröße</span><strong>20 Pkt</strong></div>
+      <div class="score-bar"><div class="score-bar-fill fill-green" style="width:20%"></div></div>
+      <p style="font-size:.75rem;color:var(--slate-500);margin-top:6px">Muss übereinstimmen, wenn angegeben</p>
+    </div>
+    <div class="score-bar-wrap">
+      <div class="score-bar-label"><span>Branche</span><strong>20 Pkt</strong></div>
+      <div class="score-bar"><div class="score-bar-fill fill-purple" style="width:20%"></div></div>
+      <p style="font-size:.75rem;color:var(--slate-500);margin-top:6px">Exakt = 20, "Alle Branchen" = 16</p>
+    </div>
+    <div class="score-bar-wrap">
+      <div class="score-bar-label"><span>Förderbereich</span><strong>15 Pkt</strong></div>
+      <div class="score-bar"><div class="score-bar-fill fill-amber" style="width:15%"></div></div>
+      <p style="font-size:.75rem;color:var(--slate-500);margin-top:6px">Normalisierter Textvergleich</p>
+    </div>
+    <div class="score-bar-wrap">
+      <div class="score-bar-label"><span>Förderart</span><strong>10 Pkt</strong></div>
+      <div class="score-bar"><div class="score-bar-fill fill-rose" style="width:10%"></div></div>
+      <p style="font-size:.75rem;color:var(--slate-500);margin-top:6px">Zuschuss, Kredit, Coaching, etc.</p>
+    </div>
+    <div class="score-bar-wrap">
+      <div class="score-bar-label"><span>Text-Ähnlichkeit</span><strong>25 Pkt</strong></div>
+      <div class="score-bar"><div class="score-bar-fill fill-cyan" style="width:25%"></div></div>
+      <p style="font-size:.75rem;color:var(--slate-500);margin-top:6px">Keyword-Overlap aus Anfrage + Vorhaben</p>
+    </div>
+  </div>
+
+  <div class="card-grid mt-20">
+    <div class="card">
+      <h3>Match-Qualitätsstufen</h3>
+      <p>Basierend auf dem Score werden Programme in Stufen eingeteilt:</p>
+      <span class="tag tag-green">85%+ Top-Empfehlung</span>
+      <span class="tag tag-blue">65%+ Gut passend</span>
+      <span class="tag tag-amber">40%+ Bedingt passend</span>
+      <span class="tag tag-rose">&lt;40% Wenig relevant</span>
+    </div>
+    <div class="card">
+      <h3>Normalisierungs-Pipeline</h3>
+      <p>Vor dem Scoring werden alle Texte normalisiert:</p>
+      <ul class="list-inside" style="margin-top:6px">
+        <li><strong>Lowercase</strong> + Akzent-Entfernung (NFD)</li>
+        <li><strong>Stopwort-Filter</strong> (deutsche Artikel, etc.)</li>
+        <li><strong>Alias-Auflösung</strong> ("Darlehen" &rarr; "Kredit / Darlehen")</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Frist-Erkennung</h3>
+      <p>Unterstützte Datumsformate:</p>
+      <ul class="list-inside" style="margin-top:6px">
+        <li><strong>ISO:</strong> 2026-12-31</li>
+        <li><strong>Deutsch:</strong> 31.12.2026</li>
+        <li><strong>Text:</strong> "laufend", "fortlaufend"</li>
+        <li><strong>Status:</strong> aktiv, bald ablaufend (&le;60 Tage), abgelaufen</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Merge-Logik</h3>
+      <p>Programme aus verschiedenen Quellen (DB + Web) werden zusammengeführt:</p>
+      <ul class="list-inside" style="margin-top:6px">
+        <li>Gruppierung nach normalisiertem Schlüssel</li>
+        <li>Höherer Score gewinnt</li>
+        <li>Gründe und Links werden gemergt</li>
+        <li>Quelle wird <strong>"hybrid"</strong></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ 6. KOMPONENTEN ═══════ -->
+<div class="section" id="components">
+  <h2 class="section-title">UI-Komponenten</h2>
+  <p class="section-sub">Die React-Komponenten und ihre Aufgaben.</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <h3><span style="color:var(--blue-400)">&#9670;</span> page.tsx</h3>
+      <p>Das <strong>Herzstück</strong> der App. Verwaltet den gesamten State: Profil, Sessions, Favoriten, Filter, Loading-Status. Steuert das Routing zwischen Onboarding, Chat und Favoriten-Ansicht.</p>
+      <span class="tag tag-blue">State Hub</span>
+      <span class="tag tag-purple">Orchestrator</span>
+    </div>
+    <div class="card">
+      <h3><span style="color:var(--green-500)">&#9670;</span> CompanyProfile.tsx</h3>
+      <p><strong>3-Stufen-Wizard</strong> für das Unternehmensprofil: (1) Name, Branche, Region (2) Größe, Mitarbeiter, Umsatz (3) Vorhaben mit Themen-Vorschlägen.</p>
+      <span class="tag tag-green">Onboarding</span>
+    </div>
+    <div class="card">
+      <h3><span style="color:var(--amber-500)">&#9670;</span> FilterPanel.tsx</h3>
+      <p><strong>Klappbares Filter-Panel</strong> mit 5 Dimensionen: Region, Förderbereich, Förderart, Branche (60+ Optionen), Unternehmensgröße. Zeigt aktive Filter-Anzahl als Badge.</p>
+      <span class="tag tag-amber">5 Filter</span>
+    </div>
+    <div class="card">
+      <h3><span style="color:var(--purple-500)">&#9670;</span> ChatMessage.tsx</h3>
+      <p>Rendert <strong>Chat-Bubbles</strong>: Nutzer-Nachrichten rechts (blau), Assistent links (weiß). Zeigt KI-Icon, Antworttext, Stats-Badge und Programm-Karten.</p>
+      <span class="tag tag-purple">Chat-UI</span>
+    </div>
+    <div class="card">
+      <h3><span style="color:var(--cyan-500)">&#9670;</span> ProgramCard.tsx</h3>
+      <p><strong>Komplexeste Komponente.</strong> Score-Ring (SVG), Match-Badge, Frist-Status, Quellen-Label, grüne/orange Tags, aufklappbare Details mit sourceUrls, Chat- und Favoriten-Buttons.</p>
+      <span class="tag tag-cyan">Kernstück</span>
+      <span class="tag tag-rose">Interaktiv</span>
+    </div>
+    <div class="card">
+      <h3><span style="color:var(--rose-500)">&#9670;</span> ProgramChatModal.tsx</h3>
+      <p><strong>Modal-Dialog</strong> für Fragen zu einem einzelnen Programm. Nutzt <code>/api/program-chat</code> mit Gemini Grounding. Quick-Question-Buttons beim ersten Öffnen.</p>
+      <span class="tag tag-rose">Modal</span>
+    </div>
+    <div class="card">
+      <h3><span style="color:var(--slate-400)">&#9670;</span> Header.tsx + Sidebar.tsx</h3>
+      <p><strong>Header:</strong> Logo, Profil-Button (zeigt Firmenname), Favoriten mit Zähler, Home-Button.<br><strong>Sidebar:</strong> Chat-Verlauf aller Sitzungen, Neue-Suche-Button.</p>
+      <span class="tag tag-blue">Navigation</span>
+    </div>
+    <div class="card">
+      <h3><span style="color:var(--slate-400)">&#9670;</span> ChatInput.tsx + TypingIndicator.tsx</h3>
+      <p><strong>ChatInput:</strong> Textarea mit Auto-Expand, Enter=Senden, Shift+Enter=Newline.<br><strong>TypingIndicator:</strong> 5-Stufen-Ladeanimation (Profil, DB, Kriterien, Relevanz, Ergebnis).</p>
+      <span class="tag tag-green">Eingabe</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ 7. DATENQUELLEN ═══════ -->
+<div class="section" id="data">
+  <h2 class="section-title">Datenquellen und Vertrauen</h2>
+  <p class="section-sub">Die drei Quellen für Förderprogramme und wie sie kombiniert werden.</p>
+
+  <div class="card-grid">
+    <div class="card" style="border-left: 3px solid var(--green-500);">
+      <h3><span style="color:var(--green-500)">&#9679;</span> Lokale Datenbank</h3>
+      <p><strong>~100+ Programme</strong>, manuell kuratiert in <code>foerderprogramme.ts</code>. Enthält KfW, BAFA, Landesbanken, EU-Programme mit vollständigen Details.</p>
+      <span class="tag tag-green">Vertrauen: HOCH</span>
+      <p class="mt-20 muted" style="font-size:.78rem">Vollständige Felder: Name, Beschreibung, Förderhöhe, Zielgruppe, Region, Frist, Förderbereich, Branche, Link</p>
+    </div>
+    <div class="card" style="border-left: 3px solid var(--amber-500);">
+      <h3><span style="color:var(--amber-500)">&#9679;</span> Perplexity Websuche</h3>
+      <p><strong>Echtzeit-Suche</strong> im Internet nach aktuellen Förderprogrammen. Liefert Quellen-URLs (Citations) für Verifikation. Modell: <code>sonar-pro</code> (beste Qualität). Prompt enthält strikte Region-Einschränkung und minimalen Kontext.</p>
+      <span class="tag tag-amber">Vertrauen: MITTEL</span>
+      <p class="mt-20 muted" style="font-size:.78rem">Nur Programme mit verifizierten Links auf vertrauenswürdige Domains werden als "mittel" eingestuft</p>
+    </div>
+    <div class="card" style="border-left: 3px solid var(--amber-500);">
+      <h3><span style="color:var(--amber-500)">&#9679;</span> Gemini (Fallback)</h3>
+      <p><strong>Google Gemini 2.5 Flash</strong> mit Search Grounding. Wird aktiviert wenn Perplexity fehlschlägt. Dient auch als <strong>JSON-Formatierer</strong> für Perplexity-Ergebnisse.</p>
+      <span class="tag tag-amber">Vertrauen: MITTEL</span>
+      <p class="mt-20 muted" style="font-size:.78rem">Dual-Rolle: Eigenständige Suche (Fallback) + Strukturierte Formatierung der Perplexity-Rohdaten</p>
+    </div>
+  </div>
+
+  <div class="card mt-20" style="max-width:680px;margin-left:auto;margin-right:auto">
+    <h3>Merge-Strategie: Hybrid-Programme</h3>
+    <p>Wenn ein Programm aus der lokalen DB <strong>und</strong> der Websuche gefunden wird:</p>
+    <ul class="list-inside" style="margin-top:8px">
+      <li>Gruppierung nach normalisiertem Schlüssel (Name + Quelle + Region)</li>
+      <li>Die Version mit dem <strong>höheren Score</strong> gewinnt</li>
+      <li>Match-Gründe und Links werden zusammengeführt</li>
+      <li>Quelle wird als <strong class="highlight">"hybrid"</strong> markiert</li>
+    </ul>
+  </div>
+
+  <h3 style="margin-top:32px;margin-bottom:12px;color:#fff;">Vertrauenswürdige Domains (Auswahl)</h3>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;">
+    <span class="tag tag-green">kfw.de</span>
+    <span class="tag tag-green">bafa.de</span>
+    <span class="tag tag-green">bmwk.de</span>
+    <span class="tag tag-green">foerderdatenbank.de</span>
+    <span class="tag tag-blue">nrwbank.de</span>
+    <span class="tag tag-blue">l-bank.de</span>
+    <span class="tag tag-blue">ibb.de</span>
+    <span class="tag tag-blue">sab-sachsen.de</span>
+    <span class="tag tag-blue">nbank.de</span>
+    <span class="tag tag-purple">ec.europa.eu</span>
+    <span class="tag tag-purple">bbi-europa.de</span>
+    <span class="tag tag-amber">exist.de</span>
+    <span class="tag tag-amber">zim.de</span>
+    <span class="tag tag-cyan">+20 weitere...</span>
+  </div>
+</div>
+
+<!-- ═══════ 8. TECH-STACK ═══════ -->
+<div class="section" id="stack">
+  <h2 class="section-title">Tech-Stack</h2>
+  <p class="section-sub">Die verwendeten Technologien und ihre Rolle im System.</p>
+
+  <h3 class="mb-12" style="color:#fff;font-size:1rem;">Frontend</h3>
+  <div class="stack-row">
+    <div class="stack-chip"><span class="dot-lg" style="background:var(--blue-400)"></span> Next.js 14 — Framework, Routing, SSR</div>
+    <div class="stack-chip"><span class="dot-lg" style="background:var(--cyan-500)"></span> React 18 — UI-Komponenten, Hooks, State</div>
+    <div class="stack-chip"><span class="dot-lg" style="background:var(--blue-600)"></span> TypeScript 6 — Typsicherheit</div>
+    <div class="stack-chip"><span class="dot-lg" style="background:var(--cyan-700)"></span> Tailwind CSS 3.4 — Styling</div>
+  </div>
+
+  <h3 class="mb-12" style="color:#fff;font-size:1rem;">Backend / API</h3>
+  <div class="stack-row">
+    <div class="stack-chip"><span class="dot-lg" style="background:var(--purple-500)"></span> Next.js API Routes — Serverless Endpoints</div>
+    <div class="stack-chip"><span class="dot-lg" style="background:var(--green-500)"></span> Perplexity API — Echtzeit-Websuche</div>
+    <div class="stack-chip"><span class="dot-lg" style="background:var(--amber-500)"></span> Google Gemini API — Grounding + JSON</div>
+  </div>
+
+  <h3 class="mb-12" style="color:#fff;font-size:1rem;">Daten und Export</h3>
+  <div class="stack-row">
+    <div class="stack-chip"><span class="dot-lg" style="background:var(--rose-500)"></span> XLSX 0.18.5 — Excel-Export</div>
+    <div class="stack-chip"><span class="dot-lg" style="background:var(--slate-400)"></span> localStorage — Persistenz im Browser</div>
+  </div>
+
+  <h3 class="mb-12" style="color:#fff;font-size:1rem;">Deployment</h3>
+  <div class="stack-row">
+    <div class="stack-chip"><span class="dot-lg" style="background:#fff"></span> Vercel — Hosting, Edge Functions, CI/CD</div>
+  </div>
+
+  <div class="card mt-20" style="max-width:680px;margin:20px auto 0">
+    <h3>Umgebungsvariablen</h3>
+    <ul class="list-inside" style="margin-top:8px">
+      <li><code>GEMINI_API_KEY</code> — Google Gemini API-Schlüssel <strong>(Pflicht)</strong></li>
+      <li><code>GEMINI_MODEL</code> — Modell-Name, default: <code>gemini-2.5-flash</code></li>
+      <li><code>PERPLEXITY_API_KEY</code> — Perplexity API-Schlüssel <strong>(optional, empfohlen)</strong></li>
+    </ul>
+  </div>
+
+  <div class="card mt-20" style="max-width:680px;margin:20px auto 0">
+    <h3>Dateistruktur</h3>
+    <pre style="font-size:.78rem;color:var(--slate-400);line-height:1.6;margin-top:8px;overflow-x:auto">
+src/
++-- app/
+|   +-- page.tsx              -- Haupt-Seite (State Hub)
+|   +-- layout.tsx            -- Root Layout + Meta
+|   +-- globals.css           -- Globale Styles
+|   +-- api/
+|       +-- chat/route.ts     -- Haupt-Suchendpoint
+|       +-- program-chat/route.ts -- Einzelprogramm-Chat
++-- components/
+|   +-- CompanyProfile.tsx    -- Onboarding-Wizard
+|   +-- FilterPanel.tsx       -- 5-Dimensionen-Filter
+|   +-- ProgramCard.tsx       -- Programm-Karte
+|   +-- ProgramChatModal.tsx  -- Programm-Frage-Modal
+|   +-- ChatMessage.tsx       -- Chat-Nachricht
+|   +-- ChatInput.tsx         -- Eingabefeld
+|   +-- Header.tsx            -- Navigation oben
+|   +-- Sidebar.tsx           -- Session-Verlauf
+|   +-- TypingIndicator.tsx   -- Lade-Animation
++-- lib/
+|   +-- search.ts             -- Scoring-Engine
+|   +-- gemini.ts             -- Gemini API Client
+|   +-- perplexity.ts         -- Perplexity API Client
+|   +-- excel-export.ts       -- XLSX-Export
+|   +-- types.ts              -- TypeScript-Typen
++-- data/
+    +-- foerderprogramme.ts   -- Lokale Programm-DB
+    </pre>
+  </div>
+</div>
+
+</div><!-- /sections -->
+
+<footer>
+  Förderprogramm-Finder 1.1 — mpool Consulting — Technische Dokumentation
+</footer>
+
+<script>
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById(tab.dataset.tab).classList.add('active');
+      window.scrollTo({ top: 200, behavior: 'smooth' });
+    });
+  });
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.querySelectorAll('.score-bar-fill').forEach(bar => {
+          const w = bar.style.width; bar.style.width = '0%';
+          requestAnimationFrame(() => { bar.style.width = w; });
+        });
+      }
+    });
+  }, { threshold: 0.3 });
+  document.querySelectorAll('.score-breakdown').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-const PERPLEXITY_MODEL = "sonar";
+const PERPLEXITY_MODEL = "sonar-pro";
 
 interface PerplexityMessage {
   role: "system" | "user" | "assistant";
@@ -43,15 +43,30 @@ export async function searchFoerderprogramme(
   const messages: PerplexityMessage[] = [
     {
       role: "system",
-      content: `Du bist ein Experte für deutsche Förderprogramme. Deine Aufgabe ist es, aktuelle, real existierende Förderprogramme aus dem Web zu recherchieren.
+      content: `Du bist ein Recherche-Experte für deutsche Förderprogramme. Durchsuche das Internet GRÜNDLICH nach passenden Förderprogrammen.
+
+SUCHSTRATEGIE:
+- Durchsuche foerderdatenbank.de, KfW, BAFA, BMWK, BMBF und die jeweiligen Landesförderbanken (NRW.BANK, L-Bank, LfA, IBB, IFB Hamburg, NBank etc.)
+- Suche auch bei EU-Portalen und spezialisierten Programmen (ZIM, go-digital, EXIST, etc.)
+- Du MUSST mindestens 5 Programme finden, maximal 8
+- Nenne REALE Programme mit echten Namen und echten Quellen
+
+FÜR JEDES PROGRAMM NENNE:
+- Name (offizieller Programmname)
+- Beschreibung (1-2 Sätze was gefördert wird)
+- Förderhöhe (z.B. "bis 50.000 EUR" oder "bis 80% Zuschuss")
+- Zielgruppe (wer kann beantragen)
+- Region (exakt: "Bundesweit" oder den vollen Bundesland-Namen wie "Nordrhein-Westfalen")
+- Frist (Antragsfrist oder "laufend")
+- Förderart (Zuschuss, Kredit, Bürgschaft, Beratung etc.)
+- Quelle (Fördergeber: KfW, BAFA, NRW.BANK etc.)
+- Exakte URL der offiziellen Programmseite
 
 REGELN:
-- Nenne NUR Programme die AKTUELL aktiv und beantragbar sind
-- Bevorzuge offizielle Quellen: KfW, BAFA, BMWK, Landesförderbanken, EU-Portale, foerderdatenbank.de
-- Für jedes Programm nenne: Name, Beschreibung, Förderhöhe, Zielgruppe, Region, Frist, Förderart, Quelle
-- Nenne die EXAKTE URL der Programmseite wenn verfügbar
 - Erfinde KEINE Programme und KEINE URLs
-- Antworte auf Deutsch`,
+- Wenn du unsicher bist ob ein Programm noch aktiv ist, nenne es trotzdem mit Hinweis
+- Antworte auf Deutsch
+- Gib IMMER konkrete Programme zurück — sage NIEMALS "ich konnte nichts finden"`,
     },
     {
       role: "user",
@@ -69,7 +84,7 @@ REGELN:
       model: PERPLEXITY_MODEL,
       messages,
       temperature,
-      max_tokens: 4096,
+      max_tokens: 8192,
       web_search: true,
     }),
     cache: "no-store",
