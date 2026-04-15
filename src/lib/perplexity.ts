@@ -85,7 +85,7 @@ REGELN:
       messages,
       temperature,
       max_tokens: 8192,
-      web_search: true,
+      return_citations: true,
     }),
     cache: "no-store",
   });

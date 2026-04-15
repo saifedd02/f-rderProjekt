@@ -308,8 +308,17 @@ export default function Home() {
         }),
       });
 
+      if (!res.ok) {
+        const text = await res.text();
+        let errorMsg = "Fehler bei der Anfrage";
+        try {
+          const parsed = JSON.parse(text);
+          errorMsg = parsed.error || errorMsg;
+        } catch { /* response is not JSON */ }
+        throw new Error(errorMsg);
+      }
+
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Fehler bei der Anfrage");
 
       const programs: ScoredProgram[] = data.programs || [];
       const topScore = programs.length > 0 ? programs[0].score : 0;
