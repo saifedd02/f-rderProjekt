@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 //   1. Direkter MP4-Link:    "https://..."
 //   2. Synthesia Share-URL:  "https://share.synthesia.io/embeds/videos/xxx"
 //   3. YouTube Embed-URL:    "https://www.youtube.com/embed/VIDEO_ID"
-const VIDEO_URL = "";
+const VIDEO_URL = "https://share.synthesia.io/embeds/videos/d91549a6-dbbd-4abb-9358-44003fbec0fb";
 // ──────────────────────────────────────────────────────────────────────────
 
 const STORAGE_KEY = "mpool-intro-seen";
