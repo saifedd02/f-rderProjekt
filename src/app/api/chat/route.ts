@@ -120,6 +120,106 @@ interface ParsedSearchResponse {
   programs?: ParsedProgram[];
 }
 
+// ── Text parser for Perplexity markdown output ──────────────────────
+
+function cleanFieldValue(value: string): string {
+  return value
+    .replace(/\*\*/g, "")
+    .replace(/\[(\d+)\]/g, "")
+    .replace(/^[-–•\s]+/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function extractField(section: string, labels: string[]): string | undefined {
+  for (const label of labels) {
+    const regex = new RegExp(
+      `\\*{0,2}${label}\\*{0,2}\\s*[:：]\\s*([^\\n]+)`,
+      "i"
+    );
+    const match = section.match(regex);
+    if (match) {
+      const value = cleanFieldValue(match[1]);
+      if (value.length > 0) return value;
+    }
+  }
+  return undefined;
+}
+
+function extractName(section: string): string {
+  const lines = section.split("\n").filter((l) => l.trim().length > 0);
+  if (lines.length === 0) return "";
+
+  const firstLine = lines[0];
+
+  const patterns = [
+    /^\s*(?:#{1,4}\s*)?\*{0,2}\d+\.\s*\*{0,2}([^*\n]+?)(?:\*{0,2}\s*$|\*{0,2}\s*[—–-])/,
+    /^\s*#{1,4}\s*\*{0,2}([^*\n]+?)\*{0,2}\s*$/,
+    /^\s*\*{0,2}([^*\n:]+?)\*{0,2}\s*$/,
+  ];
+
+  for (const pattern of patterns) {
+    const match = firstLine.match(pattern);
+    if (match) {
+      const name = cleanFieldValue(match[1]);
+      if (name.length > 3 && name.length < 200) return name;
+    }
+  }
+
+  return cleanFieldValue(firstLine).slice(0, 200);
+}
+
+function extractUrlFromSection(section: string): string | undefined {
+  const urlMatch = section.match(/https?:\/\/[^\s)\]]+/);
+  return urlMatch ? urlMatch[0].replace(/[.,;]$/, "") : undefined;
+}
+
+function parseProgramsFromText(text: string): ParsedProgram[] {
+  // Split on numbered list items (1. / 2. / etc.) at line start, optionally preceded by ###
+  const sections = text
+    .split(/(?=^\s*(?:#{1,4}\s*)?\*{0,2}\d+\.\s+)/gm)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 40 && /\d+\.\s+/.test(s.split("\n")[0]));
+
+  const programs: ParsedProgram[] = [];
+
+  for (const section of sections) {
+    const name = extractName(section);
+    if (!name || name.length < 4) continue;
+
+    const linkField = extractField(section, ["URL", "Link", "Webseite", "Website"]);
+    const link = linkField || extractUrlFromSection(section);
+
+    programs.push({
+      name,
+      beschreibung: extractField(section, ["Beschreibung", "Kurzbeschreibung"]),
+      foerderhoehe: extractField(section, [
+        "Förderhöhe",
+        "Foerderhöhe",
+        "Fördersumme",
+        "Förderbetrag",
+        "Höhe",
+      ]),
+      zielgruppe: extractField(section, ["Zielgruppe", "Wer kann beantragen"]),
+      region: extractField(section, ["Region", "Bundesland", "Geltungsbereich"]),
+      frist: extractField(section, ["Frist", "Antragsfrist", "Laufzeit"]),
+      foerderbereich: extractField(section, [
+        "Förderbereich",
+        "Foerderbereich",
+        "Kategorie",
+        "Bereich",
+      ]),
+      foerderart: extractField(section, ["Förderart", "Foerderart", "Art"]),
+      quelle: extractField(section, ["Quelle", "Fördergeber", "Anbieter"]),
+      link,
+      unternehmensgroesse: [],
+      unternehmensbranche: [],
+    });
+  }
+
+  return programs;
+}
+
 // ── Dissatisfaction detection ───────────────────────────────────────
 
 const DISSATISFIED_PATTERNS = [
@@ -415,17 +515,37 @@ async function searchWithPerplexity(
     return { programs: [], reply: "", sourceUrls: citations };
   }
 
-  if (hasGeminiApiKey()) {
-    const parsed = await formatToJson<ParsedSearchResponse>(text, citations, SEARCH_RESPONSE_SCHEMA);
-    const programs = await mapAndVerifyPrograms(parsed.programs || [], citations);
-    return {
-      programs,
-      reply: parsed.reply?.trim() || "",
-      sourceUrls: citations,
-    };
+  // Try direct text parser first — fast, deterministic, no extra API call needed
+  let parsedPrograms = parseProgramsFromText(text);
+  let reply = "";
+
+  // Fallback to Gemini formatter if parser found too few programs
+  if (parsedPrograms.length < 2 && hasGeminiApiKey()) {
+    try {
+      const parsed = await formatToJson<ParsedSearchResponse>(
+        text,
+        citations,
+        SEARCH_RESPONSE_SCHEMA
+      );
+      if ((parsed.programs?.length || 0) > parsedPrograms.length) {
+        parsedPrograms = parsed.programs || [];
+        reply = parsed.reply?.trim() || "";
+      }
+    } catch (err) {
+      console.error("[Search] Gemini formatter fallback failed:", err);
+    }
   }
 
-  return { programs: [], reply: text, sourceUrls: citations };
+  const programs = await mapAndVerifyPrograms(parsedPrograms, citations);
+  console.log(
+    `[Search] Perplexity → parsed ${parsedPrograms.length} programs, verified ${programs.length}`
+  );
+
+  return {
+    programs,
+    reply,
+    sourceUrls: citations,
+  };
 }
 
 async function searchWithGemini(
