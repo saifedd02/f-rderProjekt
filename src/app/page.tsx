@@ -70,13 +70,23 @@ export default function Home() {
   const [favorites, setFavorites] = useState<StoredFavorite[]>([]);
   const [showFavorites, setShowFavorites] = useState(false);
   const [programChatTarget, setProgramChatTarget] = useState<ScoredProgram | null>(null);
+  const [showHelpBubble, setShowHelpBubble] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Load profile + favorites from localStorage
   useEffect(() => {
     try {
       const savedProfile = localStorage.getItem(PROFILE_KEY);
-      if (savedProfile) setProfile(JSON.parse(savedProfile));
+      if (savedProfile) {
+        const parsedProfile = JSON.parse(savedProfile) as CompanyProfileType;
+        setProfile(parsedProfile);
+        setFilters((prev) => ({
+          ...prev,
+          region: parsedProfile.region || prev.region,
+          unternehmensbranche: parsedProfile.branche || prev.unternehmensbranche,
+          unternehmensgroesse: parsedProfile.groesse || prev.unternehmensgroesse,
+        }));
+      }
     } catch { /* ignore */ }
 
     try {
@@ -146,9 +156,12 @@ export default function Home() {
     localStorage.setItem(PROFILE_KEY, JSON.stringify(newProfile));
     setShowProfileEdit(false);
 
-    if (newProfile.vorhaben && newProfile.vorhaben.trim().length > 3) {
-      handleSendMessage(newProfile.vorhaben);
-    }
+    setFilters((prev) => ({
+      ...prev,
+      region: newProfile.region || prev.region,
+      unternehmensbranche: newProfile.branche || prev.unternehmensbranche,
+      unternehmensgroesse: newProfile.groesse || prev.unternehmensgroesse,
+    }));
   };
 
   // --- Favorite handlers (now stores full program data) ---
@@ -566,6 +579,40 @@ export default function Home() {
           <ChatInput onSend={handleSendMessage} isLoading={isLoading} />
         </main>
       </div>
+
+      {/* Help bubble — hint about per-program chat */}
+      {showHelpBubble ? (
+        <div className="fixed bottom-24 right-5 z-40 max-w-xs animate-fade-in-up">
+          <div className="relative bg-white border border-blue-200 shadow-lg rounded-2xl px-4 py-3 pr-8">
+            <button
+              onClick={() => setShowHelpBubble(false)}
+              className="absolute top-1.5 right-1.5 w-5 h-5 flex items-center justify-center text-gray-300 hover:text-gray-600 transition-colors"
+              aria-label="Hinweis ausblenden"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <p className="text-xs font-semibold text-gray-800 mb-0.5">
+              Hast du noch Fragen?
+            </p>
+            <p className="text-xs text-gray-500 leading-relaxed">
+              Klicke auf ein Förderprogramm, um gezielt Fragen dazu zu stellen.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <button
+          onClick={() => setShowHelpBubble(true)}
+          className="fixed bottom-24 right-5 z-40 w-10 h-10 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center"
+          aria-label="Hinweis anzeigen"
+          title="Hast du noch Fragen?"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093M12 17h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </button>
+      )}
 
       {/* Program Chat Modal */}
       {programChatTarget && (

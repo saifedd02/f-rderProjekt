@@ -75,10 +75,8 @@ export default function CompanyProfile({
         <div className="text-center mb-8">
           <div className="flex items-baseline justify-center gap-0 mb-4">
             <span className="text-2xl font-bold tracking-tight">
-              <span className="text-gray-700">m</span>
-              <span className="text-blue-600">p</span>
-              <span className="text-gray-700">oo</span>
-              <span className="text-blue-600">l</span>
+              <span className="text-blue-600">m</span>
+              <span className="text-gray-900">pool</span>
             </span>
             <span className="text-xs text-gray-400 ml-1.5">consulting</span>
           </div>
