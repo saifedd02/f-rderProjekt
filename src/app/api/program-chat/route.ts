@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateGeminiText } from "@/lib/gemini";
+import {
+  searchFoerderprogramme,
+  hasPerplexityApiKey,
+} from "@/lib/perplexity";
 import { Foerderprogramm } from "@/lib/types";
+
+function hasGeminiApiKey(): boolean {
+  return Boolean(process.env.GEMINI_API_KEY);
+}
 
 function buildProgramPrompt(
   message: string,
@@ -55,14 +63,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { text } = await generateGeminiText(
-      buildProgramPrompt(message, program, history),
-      {
-        grounded: true,
-        temperature: 0.2,
-        maxOutputTokens: 1200,
+    const prompt = buildProgramPrompt(message, program, history);
+
+    let text = "";
+
+    if (hasPerplexityApiKey()) {
+      try {
+        const result = await searchFoerderprogramme(prompt, { temperature: 0.2 });
+        text = result.text;
+      } catch (err) {
+        console.error("[ProgramChat] Perplexity failed:", err);
       }
-    );
+    }
+
+    if (!text && hasGeminiApiKey()) {
+      try {
+        const result = await generateGeminiText(prompt, {
+          grounded: true,
+          temperature: 0.2,
+          maxOutputTokens: 1200,
+        });
+        text = result.text;
+      } catch (err) {
+        console.error("[ProgramChat] Gemini failed:", err);
+      }
+    }
 
     return NextResponse.json({
       reply:
