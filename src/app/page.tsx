@@ -10,6 +10,7 @@ import ProgramCard from "@/components/ProgramCard";
 import TypingIndicator from "@/components/TypingIndicator";
 import CompanyProfile from "@/components/CompanyProfile";
 import ProgramChatModal from "@/components/ProgramChatModal";
+import VideoIntro from "@/components/VideoIntro";
 import {
   ChatMessage as ChatMessageType,
   ChatSession,
@@ -410,6 +411,7 @@ export default function Home() {
   // --- Main app ---
   return (
     <div className="h-screen flex flex-col">
+      <VideoIntro />
       <Header
         favoriteCount={favorites.length}
         onFavorites={() => setShowFavorites(!showFavorites)}
