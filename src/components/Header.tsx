@@ -26,15 +26,7 @@ export default function Header({
         onClick={onHome}
         className="flex items-center gap-3 hover:opacity-80 transition-opacity"
       >
-        <div className="flex items-baseline gap-0">
-          <span className="text-xl font-bold tracking-tight">
-            <span className="text-gray-700">m</span>
-            <span className="text-blue-600">p</span>
-            <span className="text-gray-700">oo</span>
-            <span className="text-blue-600">l</span>
-          </span>
-          <span className="text-[10px] text-gray-400 ml-1">consulting</span>
-        </div>
+        <span className="text-xl font-bold tracking-tight text-blue-600">m</span>
         <div className="h-5 w-px bg-gray-200" />
         <span className="text-sm font-medium text-gray-600">
           Förderprogramm-Finder

@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import ReactMarkdown from "react-markdown";
 import { ChatMessage as ChatMessageType, ScoredProgram } from "@/lib/types";
 import ProgramCard from "./ProgramCard";
 
@@ -40,8 +41,8 @@ export default function ChatMessage({
             </div>
             <span className="text-xs font-medium text-gray-400">mpool Assistent</span>
           </div>
-          <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
-            {message.content}
+          <div className="text-sm text-gray-700 leading-relaxed prose prose-sm max-w-none prose-headings:font-semibold prose-headings:text-gray-800 prose-strong:text-gray-800 prose-li:my-0.5">
+            <ReactMarkdown>{message.content}</ReactMarkdown>
           </div>
         </div>
       )}
