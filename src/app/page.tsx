@@ -29,6 +29,7 @@ function generateId() {
 const PROFILE_KEY = "mpool-company-profile";
 const FAVORITES_KEY = "mpool-favorites-v2";
 const SESSIONS_KEY = "mpool-chat-sessions";
+const CHAT_HINT_DISMISSED_KEY = "mpool-chat-hint-dismissed";
 
 function normalizeStoredFavorite(value: Partial<StoredFavorite> | null): StoredFavorite | null {
   if (!value?.program?.id || !value.program.name) return null;
@@ -70,7 +71,7 @@ export default function Home() {
   const [favorites, setFavorites] = useState<StoredFavorite[]>([]);
   const [showFavorites, setShowFavorites] = useState(false);
   const [programChatTarget, setProgramChatTarget] = useState<ScoredProgram | null>(null);
-  const [showHelpBubble, setShowHelpBubble] = useState(true);
+  const [chatHintDismissed, setChatHintDismissed] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Load profile + favorites from localStorage
@@ -120,8 +121,21 @@ export default function Home() {
       }
     } catch { /* ignore */ }
 
+    try {
+      if (localStorage.getItem(CHAT_HINT_DISMISSED_KEY) === "1") {
+        setChatHintDismissed(true);
+      }
+    } catch { /* ignore */ }
+
     setProfileLoaded(true);
   }, []);
+
+  const dismissChatHint = () => {
+    setChatHintDismissed(true);
+    try {
+      localStorage.setItem(CHAT_HINT_DISMISSED_KEY, "1");
+    } catch { /* ignore */ }
+  };
 
   // Save favorites
   useEffect(() => {
@@ -502,20 +516,29 @@ export default function Home() {
               )}
 
               {/* Chat messages */}
-              {!showFavorites && activeSession && (
-                <div className="space-y-2">
-                  {activeSession.messages.map((msg) => (
-                    <ChatMessage
-                      key={msg.id}
-                      message={msg}
-                      favoriteIds={favoriteIds}
-                      onToggleFavorite={toggleFavorite}
-                      onOpenProgramChat={setProgramChatTarget}
-                    />
-                  ))}
-                  {isLoading && <TypingIndicator />}
-                </div>
-              )}
+              {!showFavorites && activeSession && (() => {
+                const firstProgramsMsgId = activeSession.messages.find(
+                  (m) => m.role === "assistant" && (m.programs?.length ?? 0) > 0
+                )?.id;
+                return (
+                  <div className="space-y-2">
+                    {activeSession.messages.map((msg) => (
+                      <ChatMessage
+                        key={msg.id}
+                        message={msg}
+                        favoriteIds={favoriteIds}
+                        onToggleFavorite={toggleFavorite}
+                        onOpenProgramChat={setProgramChatTarget}
+                        showChatHintOnFirst={
+                          !chatHintDismissed && msg.id === firstProgramsMsgId
+                        }
+                        onDismissChatHint={dismissChatHint}
+                      />
+                    ))}
+                    {isLoading && <TypingIndicator />}
+                  </div>
+                );
+              })()}
 
               {/* Welcome state */}
               {!showFavorites && !activeSession && (
@@ -579,40 +602,6 @@ export default function Home() {
           <ChatInput onSend={handleSendMessage} isLoading={isLoading} />
         </main>
       </div>
-
-      {/* Help bubble — hint about per-program chat */}
-      {showHelpBubble ? (
-        <div className="fixed bottom-24 right-5 z-40 max-w-xs animate-fade-in-up">
-          <div className="relative bg-white border border-blue-200 shadow-lg rounded-2xl px-4 py-3 pr-8">
-            <button
-              onClick={() => setShowHelpBubble(false)}
-              className="absolute top-1.5 right-1.5 w-5 h-5 flex items-center justify-center text-gray-300 hover:text-gray-600 transition-colors"
-              aria-label="Hinweis ausblenden"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-            <p className="text-xs font-semibold text-gray-800 mb-0.5">
-              Hast du noch Fragen?
-            </p>
-            <p className="text-xs text-gray-500 leading-relaxed">
-              Klicke auf ein Förderprogramm, um gezielt Fragen dazu zu stellen.
-            </p>
-          </div>
-        </div>
-      ) : (
-        <button
-          onClick={() => setShowHelpBubble(true)}
-          className="fixed bottom-24 right-5 z-40 w-10 h-10 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center"
-          aria-label="Hinweis anzeigen"
-          title="Hast du noch Fragen?"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093M12 17h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </button>
-      )}
 
       {/* Program Chat Modal */}
       {programChatTarget && (

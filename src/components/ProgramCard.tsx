@@ -9,6 +9,8 @@ interface ProgramCardProps {
   onToggleFavorite: (id: string) => void;
   onOpenChat?: (sp: ScoredProgram) => void;
   rank?: number;
+  showChatHint?: boolean;
+  onDismissChatHint?: () => void;
 }
 
 function getScoreStyle(score: number) {
@@ -49,6 +51,8 @@ export default function ProgramCard({
   onToggleFavorite,
   onOpenChat,
   rank,
+  showChatHint,
+  onDismissChatHint,
 }: ProgramCardProps) {
   const [expanded, setExpanded] = useState(false);
   const {
@@ -128,15 +132,48 @@ export default function ProgramCard({
         <div className="flex-shrink-0 flex items-center gap-1">
           {/* Chat button */}
           {onOpenChat && (
-            <button
-              onClick={() => onOpenChat(scoredProgram)}
-              className="p-1.5 rounded-md text-gray-300 hover:text-blue-500 hover:bg-blue-50 transition-all"
-              title="Chat mit diesem Programm"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => onOpenChat(scoredProgram)}
+                className={`p-1.5 rounded-md transition-all ${
+                  showChatHint
+                    ? "text-blue-600 bg-blue-50 ring-2 ring-blue-300 animate-pulse"
+                    : "text-gray-300 hover:text-blue-500 hover:bg-blue-50"
+                }`}
+                title="Chat mit diesem Programm"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+              </button>
+
+              {/* Hint tooltip */}
+              {showChatHint && (
+                <div className="absolute top-full right-0 mt-2 w-60 z-30 animate-fade-in-up">
+                  <div className="absolute -top-1.5 right-3 w-3 h-3 bg-white border-l border-t border-blue-200 rotate-45" />
+                  <div className="relative bg-white border border-blue-200 shadow-lg rounded-xl px-3 py-2.5 pr-7">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDismissChatHint?.();
+                      }}
+                      className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center text-gray-300 hover:text-gray-600 transition-colors"
+                      aria-label="Hinweis ausblenden"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                    <p className="text-xs font-semibold text-gray-800 mb-0.5">
+                      Hast du Fragen zu diesem Programm?
+                    </p>
+                    <p className="text-[11px] text-gray-500 leading-snug">
+                      Klick hier, um gezielt mit der KI über dieses Förderprogramm zu chatten.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
           {/* Favorite button */}
           <button
