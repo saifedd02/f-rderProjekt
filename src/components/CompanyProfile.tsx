@@ -267,12 +267,15 @@ export default function CompanyProfile({
                 <div className="flex flex-wrap gap-1.5">
                   {[
                     "Digitalisierung",
-                    "Energieeffizienz",
-                    "Beratung & Coaching",
-                    "Klimaschutz",
-                    "Innovation & F&E",
-                    "Nachhaltigkeit",
-                    "Existenzgründung",
+                    "Energieeffizienz & Erneuerbare Energien",
+                    "Energiebereitstellung",
+                    "Ressourcenmanagement",
+                    "Emissionsminderung",
+                    "Klimabilanzierung",
+                    "Nachhaltigkeitsberichterstattung",
+                    "Nachhaltiger Einkauf",
+                    "Nachhaltige Produktionsprozesse",
+                    "Nachhaltige Seminare / Weiterbildung",
                   ].map((topic) => (
                     <button
                       key={topic}
