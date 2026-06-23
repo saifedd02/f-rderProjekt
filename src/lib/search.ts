@@ -15,8 +15,8 @@ import {
   ProgramSource,
   ScoredProgram,
   SearchFilters,
-  TODAY,
   defaultFilters,
+  getTodayIso,
 } from "./types";
 
 type ProgramInput = Foerderprogramm | DbFoerderprogramm;
@@ -321,7 +321,7 @@ function parseGermanDate(value: string): Date | undefined {
 }
 
 function getTodayDate(): Date {
-  return new Date(`${TODAY}T00:00:00`);
+  return new Date(`${getTodayIso()}T00:00:00`);
 }
 
 function diffInDays(target: Date, reference: Date): number {
@@ -407,6 +407,11 @@ function toRuntimeProgram(
     quelle: program.quelle || fallbackSource,
     isActive:
       typeof program.isActive === "boolean" ? program.isActive : undefined,
+    sourceUrls:
+      "sourceUrls" in program && program.sourceUrls && program.sourceUrls.length > 0
+        ? program.sourceUrls
+        : undefined,
+    statusNote: "statusNote" in program ? program.statusNote || undefined : undefined,
   };
 
   const deadlineStatus = getDeadlineStatus(runtimeProgram.frist, runtimeProgram.isActive);
@@ -433,7 +438,7 @@ function buildSemanticText(program: Foerderprogramm): string {
   );
 }
 
-function isGenericLink(link: string | undefined): boolean {
+export function isGenericLink(link: string | undefined): boolean {
   if (!link) return true;
 
   try {
@@ -481,54 +486,124 @@ export function getLinkWarning(program: Foerderprogramm): string | undefined {
   return undefined;
 }
 
-const REGION_BUNDESWEIT_KEYWORDS = ["bundesweit", "deutschlandweit", "deutschland", "bund", "national"];
+// ── Cross-reference against the curated local database ───────────────────
+// The local DB is hand-maintained and knows which well-known programs have
+// ended (e.g. "Digital Jetzt", "go-digital"). The web pipeline must respect
+// that knowledge so a hallucinated "still active" result can't slip through.
 
-function normalizeRegionName(value: string): string {
-  const norm = normalizeText(value);
-  // Map common abbreviations to full names
-  const regionMap: Record<string, string> = {
-    nrw: "nordrhein westfalen",
-    bw: "baden wurttemberg",
-    "baden wuerttemberg": "baden wurttemberg",
-    by: "bayern",
-    be: "berlin",
-    bb: "brandenburg",
-    hb: "bremen",
-    hh: "hamburg",
-    he: "hessen",
-    mv: "mecklenburg vorpommern",
-    ni: "niedersachsen",
-    rp: "rheinland pfalz",
-    sl: "saarland",
-    sn: "sachsen",
-    st: "sachsen anhalt",
-    sh: "schleswig holstein",
-    th: "thuringen",
-  };
-  return regionMap[norm] || norm;
+/** Distinctive core of a program name (text before the first separator). */
+function programShortName(name: string): string {
+  const core = name.split(/[–—(:]|\s-\s/)[0];
+  return normalizeText(core);
 }
 
-function isBundesweit(region: string): boolean {
-  const norm = normalizeText(region);
-  return REGION_BUNDESWEIT_KEYWORDS.some((kw) => norm.includes(kw));
+const KNOWN_PROGRAMS = foerderprogramme.map((program) => ({
+  fullNorm: normalizeText(program.name),
+  shortNorm: programShortName(program.name),
+  program,
+}));
+
+/** Find the curated DB entry that a web result refers to, if any. */
+function findKnownProgram(name: string): DbFoerderprogramm | undefined {
+  const fullNorm = normalizeText(name);
+  if (!fullNorm) return undefined;
+
+  const hit = KNOWN_PROGRAMS.find((known) => {
+    if (fullNorm === known.fullNorm) return true;
+    // Require a reasonably distinctive short name to avoid generic collisions.
+    if (known.shortNorm.length < 5) return false;
+    // Only forward containment: the web name must CONTAIN the known program's
+    // distinctive short name. We deliberately do NOT match the reverse
+    // direction (a short generic web name like "Digital" contained in a longer
+    // DB short name) — that wrongly swept up unrelated programs.
+    return fullNorm.includes(known.shortNorm);
+  });
+
+  return hit?.program;
+}
+
+/**
+ * Reconcile a web-sourced program with the curated DB:
+ *  - if it maps to a program the DB marks as ended → force inactive (so it gets
+ *    filtered out instead of being shown as "Aktiv");
+ *  - if it maps to an active DB program → backfill a verified official link when
+ *    the web link is missing/generic, and trust the DB deadline.
+ */
+export function reconcileWebProgram(program: Foerderprogramm): Foerderprogramm {
+  const known = findKnownProgram(program.name);
+  if (!known) return program;
+
+  const knownEnded =
+    known.isActive === false ||
+    getDeadlineStatus(known.frist, known.isActive) === "expired";
+
+  if (knownEnded) {
+    return {
+      ...program,
+      frist: known.frist,
+      isActive: false,
+      statusNote: `Laut Datenbank ausgelaufen/beendet (${known.frist.replace("ended:", "")}). Keine Neuanträge.`,
+    };
+  }
+
+  // Active known program → enrich with the curated official link if ours is weak,
+  // and TRUST THE DB DEADLINE: a hallucinated stale web `frist` (e.g. a past year)
+  // must not flip a DB-confirmed-active program to "expired" and filter it out.
+  const useDbLink = isGenericLink(program.link);
+  return {
+    ...program,
+    link: useDbLink ? known.link : program.link,
+    frist: known.frist || program.frist,
+    quelle: program.quelle || known.quelle,
+    isActive: true,
+  };
+}
+
+/** Lenient text match: true if either normalized value contains the other.
+ *  An empty program value passes (we don't filter out on missing free-text data). */
+function textOverlaps(programValue: string | undefined, filterValue: string): boolean {
+  const pb = normalizeText(programValue);
+  const fb = normalizeText(filterValue);
+  if (!fb || !pb) return true;
+  return pb.includes(fb) || fb.includes(pb);
+}
+
+// National/EU markers. Web results express "Bundesweit" a dozen ways
+// ("Deutschland", "Deutschlandweit", "Bund", "national", "EU", "bundesweit (DE)").
+// An exact "Bundesweit" string-equality gate dropped almost every web program and
+// returned nothing — so we match on any of these tokens instead.
+const NATIONWIDE_MARKERS = [
+  "bundesweit",
+  "deutschland",
+  "deutschlandweit",
+  "bund",
+  "national",
+  "ganz deutschland",
+  "eu",
+  "europa",
+  "europaweit",
+  "europaisch",
+];
+
+function isNationwideRegion(normalizedRegion: string): boolean {
+  if (!normalizedRegion) return false;
+  return NATIONWIDE_MARKERS.some((marker) => normalizedRegion.includes(marker));
 }
 
 function matchesRegion(programRegion: string, filterRegion: string): boolean {
   if (!isActiveFilter(filterRegion)) return true;
-  // Programs with unknown region: allow them through (especially for web results)
-  if (!programRegion) return true;
 
-  const normProgram = normalizeRegionName(programRegion);
-  const normFilter = normalizeRegionName(filterRegion);
+  const pr = normalizeText(programRegion);
+  // Missing region on a web result must NOT drop the program — recall first.
+  if (!pr) return true;
 
-  // Bundesweit programs match any region filter
-  if (isBundesweit(programRegion)) return true;
+  // "Bundesweit" filter → any nationally/EU-available program qualifies.
+  if (filterRegion === "Bundesweit") return isNationwideRegion(pr);
 
-  // If filter is Bundesweit, only show bundesweit programs
-  if (isBundesweit(filterRegion)) return isBundesweit(programRegion);
-
-  // Fuzzy matching: check if either contains the other
-  return normProgram.includes(normFilter) || normFilter.includes(normProgram);
+  // Specific Bundesland → that land (lenient containment) OR a nationwide program.
+  const fr = normalizeText(filterRegion);
+  if (pr.includes(fr) || fr.includes(pr)) return true;
+  return isNationwideRegion(pr);
 }
 
 function matchesBranche(program: Foerderprogramm, branche: string): boolean {
@@ -554,7 +629,12 @@ function matchesSize(program: Foerderprogramm, groesse: string): boolean {
 
   const sizes = program.unternehmensgroesse || [];
   if (sizes.length === 0) return true;
-  return sizes.includes(groesse);
+  if (sizes.includes(groesse)) return true;
+
+  // Web results use free-text size labels ("Grossunternehmen", "MidCap", "KMU").
+  // Canonicalize both sides so e.g. "Grossunternehmen" matches "Großes Unternehmen".
+  const target = canonicalizeGroesse(groesse) || groesse;
+  return sizes.some((entry) => canonicalizeGroesse(entry) === target);
 }
 
 function matchesFilters(
@@ -566,21 +646,21 @@ function matchesFilters(
 
   if (!matchesRegion(program.region || "", filters.region)) return false;
 
-  if (isActiveFilter(filters.foerderbereich) && program.foerderbereich) {
-    const normProgram = normalizeText(program.foerderbereich);
-    const normFilter = normalizeText(filters.foerderbereich);
-    // Fuzzy: allow partial match (e.g. "Digitalisierung" matches "Digitalisierung und IT")
-    if (!normProgram.includes(normFilter) && !normFilter.includes(normProgram)) {
-      return false;
-    }
+  // foerderbereich/foerderart: lenient containment rather than strict equality.
+  // Web results carry free-text values ("Digitalisierung, Investitionen, KI"),
+  // so an exact-equality filter would drop every web program and return nothing.
+  if (
+    isActiveFilter(filters.foerderbereich) &&
+    !textOverlaps(program.foerderbereich, filters.foerderbereich)
+  ) {
+    return false;
   }
 
-  if (isActiveFilter(filters.foerderart) && program.foerderart) {
-    const normProgram = normalizeText(program.foerderart);
-    const normFilter = normalizeText(filters.foerderart);
-    if (!normProgram.includes(normFilter) && !normFilter.includes(normProgram)) {
-      return false;
-    }
+  if (
+    isActiveFilter(filters.foerderart) &&
+    !textOverlaps(program.foerderart, filters.foerderart)
+  ) {
+    return false;
   }
 
   if (!matchesSize(program, filters.unternehmensgroesse)) return false;
@@ -595,7 +675,7 @@ export function scoreProgramList({
   filters,
   textQuery,
   source,
-  checkedAt = TODAY,
+  checkedAt = getTodayIso(),
   confidence = source === "datenbank" ? "high" : "medium",
   sourceUrls = [],
   limit = 8,
@@ -631,16 +711,15 @@ export function scoreProgramList({
 
       if (effectiveRegion) {
         maxPossible += 25;
-        const normProgramRegion = normalizeRegionName(program.region || "");
-        const normEffectiveRegion = normalizeRegionName(effectiveRegion);
-        if (isBundesweit(program.region || "")) {
+        const programRegionNorm = normalizeText(program.region);
+        if (program.region === effectiveRegion) {
+          score += 25;
+          reasons.push({ label: `Verfügbar in ${effectiveRegion}`, matched: true });
+        } else if (isNationwideRegion(programRegionNorm)) {
           score += 20;
           reasons.push({ label: "Bundesweit verfügbar", matched: true });
-        } else if (
-          normProgramRegion.includes(normEffectiveRegion) ||
-          normEffectiveRegion.includes(normProgramRegion)
-        ) {
-          score += 25;
+        } else if (programRegionNorm.includes(normalizeText(effectiveRegion))) {
+          score += 22;
           reasons.push({ label: `Verfügbar in ${effectiveRegion}`, matched: true });
         }
       }
@@ -730,19 +809,29 @@ export function scoreProgramList({
         reasons.push({ label: "Frist läuft bald aus", matched: false });
       }
 
+      if (program.statusNote) {
+        reasons.push({ label: program.statusNote, matched: false });
+      }
+
       const normalizedScore =
         maxPossible > 0 ? Math.round((score / maxPossible) * 100) : 50;
+
+      const programSources =
+        program.sourceUrls && program.sourceUrls.length > 0
+          ? program.sourceUrls
+          : sourceUrls;
 
       return {
         program,
         score: normalizedScore,
         reasons: reasons.slice(0, 5),
         linkWarning: getLinkWarning(program),
+        linkIsGeneric: program.link ? isGenericLink(program.link) : undefined,
         source,
         checkedAt,
         deadlineStatus,
         confidence,
-        sourceUrls,
+        sourceUrls: programSources,
       } satisfies ScoredProgram;
     })
     .filter((result) => {
@@ -754,9 +843,7 @@ export function scoreProgramList({
         isActiveFilter(normalizedFilters.foerderbereich) ||
         isActiveFilter(normalizedFilters.foerderart);
 
-      // Web results have less structured data → lower threshold
-      const minScore = source === "websuche" ? 10 : 20;
-      return hasContext ? result.score >= minScore : true;
+      return hasContext ? result.score >= 20 : true;
     })
     .sort((a, b) => b.score - a.score)
     .slice(0, limit);
@@ -773,7 +860,7 @@ export function scorePrograms({
     filters,
     textQuery,
     source: "datenbank",
-    checkedAt: TODAY,
+    checkedAt: getTodayIso(),
     confidence: "high",
   });
 }

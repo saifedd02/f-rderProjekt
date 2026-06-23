@@ -1,13 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateGroundedJson, formatToJson } from "@/lib/gemini";
-import { searchFoerderprogramme, hasPerplexityApiKey } from "@/lib/perplexity";
-import { scoreProgramList } from "@/lib/search";
+import { generateGroundedJson } from "@/lib/gemini";
+import {
+  searchFoerderprogramme,
+  hasPerplexityApiKey,
+  PerplexityProgram,
+  PerplexitySource,
+} from "@/lib/perplexity";
+import {
+  scoreProgramList,
+  reconcileWebProgram,
+  isGenericLink,
+  buildFallbackReply,
+} from "@/lib/search";
 import {
   CompanyProfile,
   Foerderprogramm,
   ScoredProgram,
   SearchFilters,
-  TODAY,
+  getTodayIso,
 } from "@/lib/types";
 
 // ── Helpers ─────────────────────────────────────────────────────────
@@ -63,7 +73,7 @@ function formatHistory(history: Array<{ role: string; content: string }> = []): 
     .join("\n");
 }
 
-// ── Response schema ─────────────────────────────────────────────────
+// ── Gemini fallback response schema ─────────────────────────────────
 
 const SEARCH_RESPONSE_SCHEMA = {
   type: "object",
@@ -120,106 +130,6 @@ interface ParsedSearchResponse {
   programs?: ParsedProgram[];
 }
 
-// ── Text parser for Perplexity markdown output ──────────────────────
-
-function cleanFieldValue(value: string): string {
-  return value
-    .replace(/\*\*/g, "")
-    .replace(/\[(\d+)\]/g, "")
-    .replace(/^[-–•\s]+/, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function extractField(section: string, labels: string[]): string | undefined {
-  for (const label of labels) {
-    const regex = new RegExp(
-      `\\*{0,2}${label}\\*{0,2}\\s*[:：]\\s*([^\\n]+)`,
-      "i"
-    );
-    const match = section.match(regex);
-    if (match) {
-      const value = cleanFieldValue(match[1]);
-      if (value.length > 0) return value;
-    }
-  }
-  return undefined;
-}
-
-function extractName(section: string): string {
-  const lines = section.split("\n").filter((l) => l.trim().length > 0);
-  if (lines.length === 0) return "";
-
-  const firstLine = lines[0];
-
-  const patterns = [
-    /^\s*(?:#{1,4}\s*)?\*{0,2}\d+\.\s*\*{0,2}([^*\n]+?)(?:\*{0,2}\s*$|\*{0,2}\s*[—–-])/,
-    /^\s*#{1,4}\s*\*{0,2}([^*\n]+?)\*{0,2}\s*$/,
-    /^\s*\*{0,2}([^*\n:]+?)\*{0,2}\s*$/,
-  ];
-
-  for (const pattern of patterns) {
-    const match = firstLine.match(pattern);
-    if (match) {
-      const name = cleanFieldValue(match[1]);
-      if (name.length > 3 && name.length < 200) return name;
-    }
-  }
-
-  return cleanFieldValue(firstLine).slice(0, 200);
-}
-
-function extractUrlFromSection(section: string): string | undefined {
-  const urlMatch = section.match(/https?:\/\/[^\s)\]]+/);
-  return urlMatch ? urlMatch[0].replace(/[.,;]$/, "") : undefined;
-}
-
-function parseProgramsFromText(text: string): ParsedProgram[] {
-  // Split on numbered list items (1. / 2. / etc.) at line start, optionally preceded by ###
-  const sections = text
-    .split(/(?=^\s*(?:#{1,4}\s*)?\*{0,2}\d+\.\s+)/gm)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 40 && /\d+\.\s+/.test(s.split("\n")[0]));
-
-  const programs: ParsedProgram[] = [];
-
-  for (const section of sections) {
-    const name = extractName(section);
-    if (!name || name.length < 4) continue;
-
-    const linkField = extractField(section, ["URL", "Link", "Webseite", "Website"]);
-    const link = linkField || extractUrlFromSection(section);
-
-    programs.push({
-      name,
-      beschreibung: extractField(section, ["Beschreibung", "Kurzbeschreibung"]),
-      foerderhoehe: extractField(section, [
-        "Förderhöhe",
-        "Foerderhöhe",
-        "Fördersumme",
-        "Förderbetrag",
-        "Höhe",
-      ]),
-      zielgruppe: extractField(section, ["Zielgruppe", "Wer kann beantragen"]),
-      region: extractField(section, ["Region", "Bundesland", "Geltungsbereich"]),
-      frist: extractField(section, ["Frist", "Antragsfrist", "Laufzeit"]),
-      foerderbereich: extractField(section, [
-        "Förderbereich",
-        "Foerderbereich",
-        "Kategorie",
-        "Bereich",
-      ]),
-      foerderart: extractField(section, ["Förderart", "Foerderart", "Art"]),
-      quelle: extractField(section, ["Quelle", "Fördergeber", "Anbieter"]),
-      link,
-      unternehmensgroesse: [],
-      unternehmensbranche: [],
-    });
-  }
-
-  return programs;
-}
-
 // ── Dissatisfaction detection ───────────────────────────────────────
 
 const DISSATISFIED_PATTERNS = [
@@ -255,80 +165,71 @@ function buildSearchPrompt(
   history?: Array<{ role: string; content: string }>,
   shownPrograms?: string[]
 ) {
+  const today = getTodayIso();
   const dissatisfied = isUserDissatisfied(message);
   const hasShownPrograms = shownPrograms && shownPrograms.length > 0;
-
-  // Determine region from filters or profile
-  const regionFilter = filters?.region && filters.region !== "Alle Regionen" ? filters.region : null;
-  const regionProfile = profile?.region || null;
-  const effectiveRegion = regionFilter || regionProfile;
-
-  // Determine foerderbereich from filters
-  const foerderbereich = filters?.foerderbereich && filters.foerderbereich !== "Alle Kategorien"
-    ? filters.foerderbereich : null;
 
   const exclusionBlock = hasShownPrograms
     ? `\nBEREITS GEZEIGTE PROGRAMME (NICHT WIEDERHOLEN):
 ${shownPrograms.map((n) => `- ${n}`).join("\n")}
-→ Suche nach KOMPLETT ANDEREN Programmen!\n`
+→ Diese Programme DARF du NICHT nochmal nennen. Suche nach KOMPLETT ANDEREN Programmen!\n`
     : "";
 
   const diversityInstruction = dissatisfied
-    ? `\nDER NUTZER IST UNZUFRIEDEN — suche bei ANDEREN Quellen, mit ANDEREN Stichwörtern. Probiere andere Förderarten. Gib NIEMALS dieselben Programme wie zuvor zurück.\n`
+    ? `\nDER NUTZER IST UNZUFRIEDEN MIT DEN BISHERIGEN ERGEBNISSEN:
+- Suche unter ANDEREN Stichwörtern und bei ANDEREN Quellen als bisher
+- Erweitere die Suche auf Landes- und EU-Programme die noch nicht genannt wurden
+- Probiere andere Förderarten (z.B. wenn bisher Zuschüsse: jetzt Kredite/Bürgschaften)
+- Schaue bei spezialisierten Förderbanken und Ministerien die noch nicht erwähnt wurden
+- Gib NIEMALS dieselben Programme wie zuvor zurück\n`
     : "";
 
-  // Build a focused, minimal prompt
-  let prompt = `Heute ist der ${TODAY}. Recherchiere aktuelle Förderprogramme in Deutschland.\n`;
+  return `Heute ist der ${today}. Recherchiere aktuell aktive, HEUTE noch beantragbare Förderprogramme in Deutschland.
+Nimm KEINE ausgelaufenen Programme auf (z.B. "Digital Jetzt" und "go-digital" sind beendet).
+${exclusionBlock}${diversityInstruction}
+UNTERNEHMENSPROFIL:
+${formatProfile(profile)}
 
-  // STRICT region instruction — most important constraint
-  if (effectiveRegion && effectiveRegion !== "Bundesweit") {
-    prompt += `\n⚠️ REGION-EINSCHRÄNKUNG (STRIKT EINHALTEN):
-Zeige NUR Programme die in "${effectiveRegion}" ODER bundesweit verfügbar sind.
-Programme die NUR in anderen Bundesländern gelten, NIEMALS anzeigen!
-Bei jedem Programm MUSS das Feld "Region" entweder "${effectiveRegion}" oder "Bundesweit" sein.\n`;
-  }
+AKTIVE FILTER:
+${formatFilters(filters)}
 
-  prompt += `${exclusionBlock}${diversityInstruction}`;
+BISHERIGE KONVERSATION:
+${formatHistory(history)}
 
-  prompt += `\nSUCHANFRAGE: ${message}\n`;
+AKTUELLE NUTZERANFRAGE:
+${message}
 
-  // Only include minimal, search-relevant context — NO company name, employees, revenue
-  const contextParts: string[] = [];
-  if (foerderbereich) contextParts.push(`Förderbereich: ${foerderbereich}`);
-  if (profile?.groesse) contextParts.push(`Unternehmensgröße: ${profile.groesse}`);
-  if (profile?.vorhaben) contextParts.push(`Vorhaben: ${profile.vorhaben}`);
-  if (profile?.branche) contextParts.push(`Branche: ${profile.branche}`);
-  if (filters?.foerderart && filters.foerderart !== "Alle auswählen") {
-    contextParts.push(`Bevorzugte Förderart: ${filters.foerderart}`);
-  }
-
-  if (contextParts.length > 0) {
-    prompt += `\nKONTEXT:\n${contextParts.map((p) => `- ${p}`).join("\n")}\n`;
-  }
-
-  if (history && history.length > 0) {
-    prompt += `\nBISHERIGE KONVERSATION:\n${formatHistory(history)}\n`;
-  }
-
-  prompt += `\nFinde 5-8 passende Förderprogramme. Für jedes Programm nenne: Name, Beschreibung, Förderhöhe, Zielgruppe, Region, Frist, Förderart, Quelle und die URL der offiziellen Programmseite.`;
-
-  return prompt;
+Finde maximal 8 passende, aktuell aktive Förderprogramme. Nenne für jedes Programm: Name, Beschreibung, Förderhöhe, Zielgruppe, Region, Frist, Förderart, Quelle und die EXAKTE URL der offiziellen Programmseite. Verweise pro Programm auf die belegenden Quellen (sourceIndices).`;
 }
 
-// ── Link validation & verification ──────────────────────────────────
+// ── Link validation ─────────────────────────────────────────────────
 
 const TRUSTED_DOMAINS = [
   "kfw.de", "bafa.de", "bmwk.de", "bundeswirtschaftsministerium.de",
-  "foerderdatenbank.de", "nrwbank.de", "nrw.de", "l-bank.de", "lfa.de",
+  "bmwe.de", "foerderdatenbank.de", "foerderinfo.bund.de", "nrwbank.de",
+  "wirtschaft.nrw", "nrw.de", "l-bank.de", "lfa.de",
   "nbank.de", "ibb.de", "ifb-hamburg.de", "wib-hessen.de", "sab.sachsen.de",
   "ib-sh.de", "europa.eu", "efre.nrw.de", "bmf.de", "bmbf.de", "ptj.de",
   "dlr.de", "ble.de", "exist.de", "zim.de", "innovation-beratung-foerderung.de",
-  "go-digital.de", "mittelstand-digital.de", "bayern.de", "sachsen.de",
+  "go-digital.de", "mittelstand-digital.de", "inqa.de", "digitalbonus.bayern",
+  "bayern.de", "sachsen.de",
   "niedersachsen.de", "hessen.de", "baden-wuerttemberg.de", "thueringen.de",
   "brandenburg.de", "sachsen-anhalt.de", "mecklenburg-vorpommern.de",
   "saarland.de", "schleswig-holstein.de", "berlin.de", "bremen.de",
   "hamburg.de", "rheinland-pfalz.de",
 ];
+
+// Fördergeber → official domain (used to prefer the right source in fallbacks).
+const QUELLE_DOMAIN_MAP: Record<string, string> = {
+  kfw: "kfw.de",
+  bafa: "bafa.de",
+  bmwk: "bundeswirtschaftsministerium.de",
+  bmwe: "bundeswirtschaftsministerium.de",
+  zim: "zim.de",
+  inqa: "inqa.de",
+  euronorm: "innovation-beratung-foerderung.de",
+  efre: "efre.nrw.de",
+};
 
 function validateLink(url?: string): string | undefined {
   if (!url) return undefined;
@@ -347,51 +248,132 @@ function validateLink(url?: string): string | undefined {
   }
 }
 
-/**
- * Verify that a URL is actually reachable via HEAD request.
- * Returns the URL if reachable (2xx/3xx), undefined otherwise.
- */
-async function verifyUrl(url: string): Promise<string | undefined> {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 4000);
+function uniqueStrings(values: Array<string | undefined>): string[] {
+  return Array.from(new Set(values.filter((v): v is string => Boolean(v))));
+}
 
-    const res = await fetch(url, {
-      method: "HEAD",
-      redirect: "follow",
-      signal: controller.signal,
-      headers: { "User-Agent": "FoerderprogrammFinder/1.1 LinkCheck" },
-    });
+// Combining diacritical marks (U+0300–U+036F). Built via RegExp(string) so the
+// source contains no invisible combining characters that an editor could mangle.
+const DIACRITICS = new RegExp("[\\u0300-\\u036f]", "g");
 
-    clearTimeout(timeout);
-    return res.ok || (res.status >= 300 && res.status < 400) ? url : undefined;
-  } catch {
-    return undefined;
-  }
+function nameTokens(name: string): string[] {
+  return name
+    .normalize("NFD")
+    .replace(DIACRITICS, "")
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((t) => t.length > 3);
 }
 
 /**
- * Verify multiple URLs in parallel with a concurrency limit.
- * Returns a Map<url, verified_url | undefined>.
+ * Choose the best official link + per-program source list from a set of
+ * candidate sources, preferring (1) the model's explicit specific link,
+ * (2) a source whose domain matches the Fördergeber, (3) a source whose URL
+ * contains program-name tokens, falling back to the first non-generic source.
+ * Returns no link rather than a wrong/generic one when nothing qualifies well.
  */
-async function verifyUrls(urls: string[]): Promise<Map<string, string | undefined>> {
-  const unique = Array.from(new Set(urls.filter(Boolean)));
-  if (unique.length === 0) return new Map();
+function resolveLinkAndSources(
+  modelLink: string | undefined,
+  quelle: string | undefined,
+  programName: string,
+  candidates: PerplexitySource[]
+): { link?: string; sourceUrls: string[] } {
+  const validated = candidates
+    .map((s) => ({ source: s, url: validateLink(s.url) }))
+    .filter((s): s is { source: PerplexitySource; url: string } => Boolean(s.url));
 
-  const results = await Promise.allSettled(
-    unique.map(async (url) => ({
-      url,
-      verified: await verifyUrl(url),
-    }))
-  );
+  const sourceUrls = uniqueStrings(validated.map((s) => s.url)).slice(0, 4);
 
-  const map = new Map<string, string | undefined>();
-  for (const result of results) {
-    if (result.status === "fulfilled") {
-      map.set(result.value.url, result.value.verified);
-    }
+  const directLink = validateLink(modelLink);
+
+  // 1. Model link that is specific (not a generic overview page) wins.
+  if (directLink && !isGenericLink(directLink)) {
+    return { link: directLink, sourceUrls: uniqueStrings([directLink, ...sourceUrls]).slice(0, 4) };
   }
-  return map;
+
+  // 2. Score candidate sources.
+  const quelleKey = (quelle || "").toLowerCase();
+  const preferredDomain = Object.entries(QUELLE_DOMAIN_MAP).find(([key]) =>
+    quelleKey.includes(key)
+  )?.[1];
+  const tokens = nameTokens(programName);
+
+  let best: { url: string; score: number } | undefined;
+  for (const { url } of validated) {
+    let score = 0;
+    let host = "";
+    let path = "";
+    try {
+      const u = new URL(url);
+      host = u.hostname.replace("www.", "").toLowerCase();
+      path = u.pathname.toLowerCase();
+    } catch {
+      continue;
+    }
+    if (isGenericLink(url)) score -= 3;
+    if (preferredDomain && (host === preferredDomain || host.endsWith(`.${preferredDomain}`))) {
+      score += 4;
+    }
+    const haystack = `${path} ${url.toLowerCase()}`;
+    if (tokens.some((t) => haystack.includes(t))) score += 2;
+    if (path.length > 1) score += 1;
+    if (!best || score > best.score) best = { url, score };
+  }
+
+  if (best && best.score > 0) {
+    return { link: best.url, sourceUrls: uniqueStrings([best.url, ...sourceUrls]).slice(0, 4) };
+  }
+
+  // 3. Fall back to the model link (even if generic) or nothing.
+  return {
+    link: directLink || undefined,
+    sourceUrls: directLink
+      ? uniqueStrings([directLink, ...sourceUrls]).slice(0, 4)
+      : sourceUrls,
+  };
+}
+
+// ── Resolve Google grounding-redirect URLs to their real target ─────────
+// Gemini grounding exposes sources as vertexaisearch.cloud.google.com redirect
+// URLs (not official domains), so they fail validateLink and the Gemini path
+// would otherwise produce link-less, source-less cards. We follow each redirect
+// once (cached, bounded, fail-open) to recover the real publisher URL.
+const redirectCache = new Map<string, string | undefined>();
+
+async function resolveRedirect(url: string): Promise<string | undefined> {
+  if (redirectCache.has(url)) return redirectCache.get(url);
+
+  let finalUrl: string | undefined;
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 4000);
+    const res = await fetch(url, {
+      method: "GET",
+      redirect: "follow",
+      signal: controller.signal,
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+        Accept: "text/html,application/xhtml+xml",
+      },
+    });
+    clearTimeout(timeout);
+    finalUrl = res.url && res.url !== url ? res.url : undefined;
+  } catch {
+    finalUrl = undefined;
+  }
+
+  redirectCache.set(url, finalUrl);
+  return finalUrl;
+}
+
+async function resolveRedirects(urls: string[]): Promise<string[]> {
+  const unique = Array.from(new Set(urls.filter(Boolean)));
+  if (unique.length === 0) return [];
+  const results = await Promise.allSettled(unique.map((u) => resolveRedirect(u)));
+  return results
+    .map((r) => (r.status === "fulfilled" ? r.value : undefined))
+    .filter((u): u is string => Boolean(u));
 }
 
 // ── Program mapping ─────────────────────────────────────────────────
@@ -399,87 +381,43 @@ async function verifyUrls(urls: string[]): Promise<Map<string, string | undefine
 function slugify(value: string): string {
   return value
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
+    .replace(DIACRITICS, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 80) || "programm";
 }
 
-function matchCitationToProgram(
-  program: ParsedProgram,
-  citations: string[]
-): string | undefined {
-  if (citations.length === 0) return undefined;
-
-  const programNameLower = (program.name || "").toLowerCase();
-  const quelleLower = (program.quelle || "").toLowerCase();
-
-  const matched = citations.find((url) => {
-    const urlLower = url.toLowerCase();
-    const nameTokens = programNameLower
-      .split(/[\s\-–]+/)
-      .filter((t) => t.length > 3);
-    return (
-      nameTokens.some((token) => urlLower.includes(token)) ||
-      (quelleLower && urlLower.includes(quelleLower))
-    );
-  });
-
-  return matched ? validateLink(matched) : undefined;
+function baseProgram(
+  p: { name?: string; quelle?: string },
+  fields: Partial<Foerderprogramm>
+): Foerderprogramm {
+  return {
+    id: `web-${slugify(p.name || "")}-${slugify(p.quelle || "quelle")}`,
+    name: (p.name || "").trim() || "Unbekanntes Förderprogramm",
+    quelle: p.quelle?.trim() || "Websuche",
+    unternehmensgroesse: [],
+    unternehmensbranche: [],
+    isActive: undefined,
+    ...fields,
+  };
 }
 
-async function mapAndVerifyPrograms(
-  programs: ParsedProgram[],
-  citations: string[]
-): Promise<Foerderprogramm[]> {
-  const validPrograms = programs.filter(
-    (p) => typeof p.name === "string" && p.name.trim()
-  );
-
-  // First pass: assign links from program data or citation matching
-  const mapped = validPrograms.map((program) => {
-    const directLink = validateLink(program.link);
-    const citationLink = !directLink
-      ? matchCitationToProgram(program, citations)
-      : undefined;
-    const link = directLink || citationLink;
-
-    return {
-      program,
-      link,
-    };
-  });
-
-  // Collect all links that need verification
-  const linksToVerify = mapped
-    .map((m) => m.link)
-    .filter((l): l is string => Boolean(l));
-
-  // Verify all links in parallel
-  const verifiedMap = await verifyUrls(linksToVerify);
-
-  // Build final Foerderprogramm array with verified links
-  return mapped.map(({ program, link }) => ({
-    id: `web-${slugify(program.name || "")}-${slugify(program.quelle || "quelle")}`,
-    name: program.name?.trim() || "Unbekanntes Förderprogramm",
-    beschreibung: program.beschreibung?.trim() || undefined,
-    foerderhoehe: program.foerderhoehe?.trim() || undefined,
-    zielgruppe: program.zielgruppe?.trim() || undefined,
-    region: program.region?.trim() || undefined,
-    frist: program.frist?.trim() || undefined,
-    foerderbereich: program.foerderbereich?.trim() || undefined,
-    foerderart: program.foerderart?.trim() || undefined,
-    link: link ? verifiedMap.get(link) : undefined,
-    quelle: program.quelle?.trim() || "Websuche",
-    unternehmensgroesse: Array.isArray(program.unternehmensgroesse)
-      ? program.unternehmensgroesse.filter(Boolean)
-      : [],
-    unternehmensbranche: Array.isArray(program.unternehmensbranche)
-      ? program.unternehmensbranche.filter(Boolean)
-      : [],
-    isActive: true,
-  }));
+/**
+ * Reconcile a set of web programs against the curated local DB.
+ *
+ * The DB cross-reference HARD-excludes confirmed-ended programs (Digital Jetzt,
+ * go-digital) and backfills verified official links for active ones. Currency
+ * otherwise relies on the recency-biased Sonar search (official-domain filter +
+ * fresh sources) and the prompt's explicit exclusion of discontinued programs —
+ * we deliberately do NOT do a live per-page discontinuation scan: it added
+ * real latency and produced false positives (a marker can refer to a predecessor
+ * program on an otherwise active page) without ever hard-hiding anything.
+ */
+function finalizeWebPrograms(
+  drafts: Array<{ program: Foerderprogramm }>
+): Foerderprogramm[] {
+  return drafts.map((d) => reconcileWebProgram(d.program));
 }
 
 // ── Search paths ────────────────────────────────────────────────────
@@ -508,64 +446,97 @@ function extractGroundingUrls(response: Record<string, unknown>): string[] {
 async function searchWithPerplexity(
   prompt: string,
   temperature: number
-): Promise<{ programs: Foerderprogramm[]; reply: string; sourceUrls: string[] }> {
-  const { text, citations } = await searchFoerderprogramme(prompt, { temperature });
+): Promise<{ programs: Foerderprogramm[]; reply: string }> {
+  const { reply, programs, searchResults } = await searchFoerderprogramme(prompt, {
+    temperature,
+  });
 
-  if (!text) {
-    return { programs: [], reply: "", sourceUrls: citations };
-  }
+  const drafts = programs
+    .filter((p: PerplexityProgram) => typeof p.name === "string" && p.name.trim())
+    .map((p: PerplexityProgram) => {
+      // Resolve THIS program's own sources from its sourceIndices ONLY. We do
+      // NOT fall back to the full global search_results list when indices are
+      // empty/invalid — that would put the same shared sources on every card,
+      // reintroducing the exact bug this design fixes. With no valid indices we
+      // rely on the model's own per-program link instead.
+      const candidates = Array.isArray(p.sourceIndices)
+        ? p.sourceIndices
+            .map((i) => searchResults[i - 1])
+            .filter((s): s is PerplexitySource => Boolean(s?.url))
+        : [];
+      const { link, sourceUrls } = resolveLinkAndSources(p.link, p.quelle, p.name, candidates);
 
-  // Try direct text parser first — fast, deterministic, no extra API call needed
-  let parsedPrograms = parseProgramsFromText(text);
-  let reply = "";
+      return {
+        program: baseProgram(p, {
+          beschreibung: p.beschreibung?.trim() || undefined,
+          foerderhoehe: p.foerderhoehe?.trim() || undefined,
+          zielgruppe: p.zielgruppe?.trim() || undefined,
+          region: p.region?.trim() || undefined,
+          frist: p.frist?.trim() || undefined,
+          foerderbereich: p.foerderbereich?.trim() || undefined,
+          foerderart: p.foerderart?.trim() || undefined,
+          link,
+          sourceUrls,
+          unternehmensgroesse: Array.isArray(p.unternehmensgroesse)
+            ? p.unternehmensgroesse.filter(Boolean)
+            : [],
+          unternehmensbranche: Array.isArray(p.unternehmensbranche)
+            ? p.unternehmensbranche.filter(Boolean)
+            : [],
+          // Trust the model's "aktiv" only as a hint; evidence gates apply later.
+          isActive: p.status?.toLowerCase() === "ausgelaufen" ? false : undefined,
+        }),
+      };
+    });
 
-  // Fallback to Gemini formatter if parser found too few programs
-  if (parsedPrograms.length < 2 && hasGeminiApiKey()) {
-    try {
-      const parsed = await formatToJson<ParsedSearchResponse>(
-        text,
-        citations,
-        SEARCH_RESPONSE_SCHEMA
-      );
-      if ((parsed.programs?.length || 0) > parsedPrograms.length) {
-        parsedPrograms = parsed.programs || [];
-        reply = parsed.reply?.trim() || "";
-      }
-    } catch (err) {
-      console.error("[Search] Gemini formatter fallback failed:", err);
-    }
-  }
-
-  const programs = await mapAndVerifyPrograms(parsedPrograms, citations);
-  console.log(
-    `[Search] Perplexity → parsed ${parsedPrograms.length} programs, verified ${programs.length}`
-  );
-
-  return {
-    programs,
-    reply,
-    sourceUrls: citations,
-  };
+  const finalized = finalizeWebPrograms(drafts);
+  return { programs: finalized, reply: reply?.trim() || "" };
 }
 
 async function searchWithGemini(
   prompt: string,
   temperature: number
-): Promise<{ programs: Foerderprogramm[]; reply: string; sourceUrls: string[] }> {
+): Promise<{ programs: Foerderprogramm[]; reply: string }> {
   const { parsed, raw } = await generateGroundedJson<ParsedSearchResponse>(
     prompt,
     SEARCH_RESPONSE_SCHEMA,
     { temperature }
   );
 
-  const sourceUrls = extractGroundingUrls(raw.grounded as Record<string, unknown>);
-  const programs = await mapAndVerifyPrograms(parsed.programs || [], sourceUrls);
+  // Gemini grounding URLs are vertexaisearch redirects — resolve them to real
+  // publisher URLs so they can pass validateLink and become usable sources.
+  const groundingUrls = extractGroundingUrls(raw.grounded as Record<string, unknown>);
+  const resolvedUrls = await resolveRedirects(groundingUrls);
+  const candidates: PerplexitySource[] = resolvedUrls.map((url) => ({ url }));
 
-  return {
-    programs,
-    reply: parsed.reply?.trim() || "",
-    sourceUrls,
-  };
+  const drafts = (parsed.programs || [])
+    .filter((p) => typeof p.name === "string" && p.name.trim())
+    .map((p) => {
+      const { link, sourceUrls } = resolveLinkAndSources(p.link, p.quelle, p.name!, candidates);
+      return {
+        program: baseProgram(p, {
+          beschreibung: p.beschreibung?.trim() || undefined,
+          foerderhoehe: p.foerderhoehe?.trim() || undefined,
+          zielgruppe: p.zielgruppe?.trim() || undefined,
+          region: p.region?.trim() || undefined,
+          frist: p.frist?.trim() || undefined,
+          foerderbereich: p.foerderbereich?.trim() || undefined,
+          foerderart: p.foerderart?.trim() || undefined,
+          link,
+          sourceUrls,
+          unternehmensgroesse: Array.isArray(p.unternehmensgroesse)
+            ? p.unternehmensgroesse.filter(Boolean)
+            : [],
+          unternehmensbranche: Array.isArray(p.unternehmensbranche)
+            ? p.unternehmensbranche.filter(Boolean)
+            : [],
+          isActive: undefined,
+        }),
+      };
+    });
+
+  const finalized = finalizeWebPrograms(drafts);
+  return { programs: finalized, reply: parsed.reply?.trim() || "" };
 }
 
 // ── Main handler ────────────────────────────────────────────────────
@@ -581,6 +552,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const today = getTodayIso();
     const normalizedProfile = profile || null;
     const shownProgramNames: string[] = Array.isArray(shownPrograms)
       ? shownPrograms.filter((n): n is string => typeof n === "string" && n.trim().length > 0)
@@ -600,25 +572,37 @@ export async function POST(request: NextRequest) {
       history,
       shownProgramNames
     );
-    const searchTemperature = dissatisfied ? 0.7 : isFollowUp ? 0.4 : 0.2;
+    const searchTemperature = dissatisfied ? 0.6 : isFollowUp ? 0.3 : 0.1;
 
     const usePerplexity = hasPerplexityApiKey();
     const useGemini = hasGeminiApiKey();
 
     let programs: ScoredProgram[] = [];
-    let webReply = "";
     let searchEngine: "perplexity" | "gemini" | "none" = "none";
+
+    const runScore = (webPrograms: Foerderprogramm[], confidence: "high" | "medium" | "low") =>
+      scoreProgramList({
+        programs: webPrograms,
+        profile: normalizedProfile,
+        filters,
+        textQuery: message,
+        source: "websuche",
+        checkedAt: today,
+        confidence,
+        sourceUrls: [], // per-program sources only — never a shared global list
+        limit: 8,
+      }).filter(
+        (sp) =>
+          shownNamesNormalized.size === 0 ||
+          !shownNamesNormalized.has(sp.program.name.toLowerCase().trim())
+      );
 
     if (usePerplexity || useGemini) {
       try {
-        let searchResult: {
-          programs: Foerderprogramm[];
-          reply: string;
-          sourceUrls: string[];
-        };
+        let searchResult: { programs: Foerderprogramm[]; reply: string };
 
         if (usePerplexity) {
-          console.log("[Search] Using Perplexity for web search");
+          console.log("[Search] Using Perplexity (sonar-pro) for web search");
           searchEngine = "perplexity";
           searchResult = await searchWithPerplexity(searchPrompt, searchTemperature);
         } else {
@@ -627,59 +611,24 @@ export async function POST(request: NextRequest) {
           searchResult = await searchWithGemini(searchPrompt, searchTemperature);
         }
 
-        const confidence = searchResult.sourceUrls.length > 0
-          ? (usePerplexity ? "high" : "medium")
+        const hasLinks = searchResult.programs.some((p) => p.link);
+        const confidence: "high" | "medium" | "low" = hasLinks
+          ? usePerplexity
+            ? "high"
+            : "medium"
           : "low";
 
-        programs = scoreProgramList({
-          programs: searchResult.programs,
-          profile: normalizedProfile,
-          filters,
-          textQuery: message,
-          source: "websuche",
-          checkedAt: TODAY,
-          confidence: confidence as "high" | "medium" | "low",
-          sourceUrls: searchResult.sourceUrls,
-          limit: 8,
-        });
-
-        // Exclude already-shown programs
-        if (shownNamesNormalized.size > 0) {
-          programs = programs.filter(
-            (sp) => !shownNamesNormalized.has(sp.program.name.toLowerCase().trim())
-          );
-        }
-
-        webReply = searchResult.reply;
+        programs = runScore(searchResult.programs, confidence);
       } catch (error) {
         console.error("Web search error:", error);
 
-        // If Perplexity failed, try Gemini as fallback
         if (usePerplexity && useGemini) {
           try {
             console.log("[Search] Perplexity failed, falling back to Gemini");
             searchEngine = "gemini";
             const fallback = await searchWithGemini(searchPrompt, searchTemperature);
-
-            programs = scoreProgramList({
-              programs: fallback.programs,
-              profile: normalizedProfile,
-              filters,
-              textQuery: message,
-              source: "websuche",
-              checkedAt: TODAY,
-              confidence: fallback.sourceUrls.length > 0 ? "medium" : "low",
-              sourceUrls: fallback.sourceUrls,
-              limit: 8,
-            });
-
-            if (shownNamesNormalized.size > 0) {
-              programs = programs.filter(
-                (sp) => !shownNamesNormalized.has(sp.program.name.toLowerCase().trim())
-              );
-            }
-
-            webReply = fallback.reply;
+            const hasLinks = fallback.programs.some((p) => p.link);
+            programs = runScore(fallback.programs, hasLinks ? "medium" : "low");
           } catch (fallbackError) {
             console.error("Gemini fallback also failed:", fallbackError);
           }
@@ -687,11 +636,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const reply =
-      webReply ||
-      (programs.length > 0
-        ? `Ich habe ${programs.length} passende Förderprogramme für Sie gefunden.`
-        : "Leider konnte ich keine passenden Förderprogramme finden. Bitte versuchen Sie eine andere Beschreibung oder passen Sie Ihre Filter an.");
+    // Use a clean, result-based reply instead of the model's prose disclaimer
+    // (the "Hinweis zur Auswahl" intro). That intro confused users and, with 0
+    // shown programs, read as an excuse rather than a result.
+    const reply = buildFallbackReply(programs, normalizedProfile, filters);
 
     return NextResponse.json({
       reply,

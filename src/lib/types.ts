@@ -1,6 +1,12 @@
 // ── Dates ────────────────────────────────────────────────────────────
-/** Today's date injected into every server-side pipeline run. */
-export const TODAY = "2026-04-07";
+/** Always-fresh ISO date (YYYY-MM-DD). Use this in server hot paths so the
+ *  pipeline never evaluates programs against a stale, hardcoded "today". */
+export function getTodayIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+/** Today's date, computed at module load. Fine for client display defaults;
+ *  prefer getTodayIso() on the server where freshness per request matters. */
+export const TODAY = getTodayIso();
 
 // ── Company profile ──────────────────────────────────────────────────
 export interface CompanyProfile {
@@ -33,6 +39,10 @@ export interface Foerderprogramm {
   /** "aktiv" | "inaktiv" — derived from deadline + evidence, not LLM opinion */
   isActive?: boolean;
   quelle?: string;
+  /** Sources backing THIS specific program (per-program, not a global list). */
+  sourceUrls?: string[];
+  /** Short note on why the status was set (e.g. "laut offizieller Quelle ausgelaufen"). */
+  statusNote?: string;
 }
 
 // ── Scoring & match output ───────────────────────────────────────────
@@ -48,6 +58,8 @@ export interface ScoredProgram {
   reasons: MatchReason[];
   /** Warning about link quality */
   linkWarning?: string;
+  /** Whether program.link is only a generic overview page (server-computed, single source of truth for the CTA label). */
+  linkIsGeneric?: boolean;
   /** Where the data came from */
   source: ProgramSource;
   /** When the data was last checked (ISO date) */

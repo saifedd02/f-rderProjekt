@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { CompanyProfile } from "@/lib/types";
 
 interface HeaderProps {
@@ -26,7 +27,14 @@ export default function Header({
         onClick={onHome}
         className="flex items-center gap-3 hover:opacity-80 transition-opacity"
       >
-        <span className="text-xl font-bold tracking-tight text-blue-600">m</span>
+        <Image
+          src="/mpool-logo.png"
+          alt="mpool consulting"
+          width={975}
+          height={470}
+          priority
+          className="h-7 w-auto"
+        />
         <div className="h-5 w-px bg-gray-200" />
         <span className="text-sm font-medium text-gray-600">
           Förderprogramm-Finder

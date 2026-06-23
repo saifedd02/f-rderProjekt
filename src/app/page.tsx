@@ -10,7 +10,6 @@ import ProgramCard from "@/components/ProgramCard";
 import TypingIndicator from "@/components/TypingIndicator";
 import CompanyProfile from "@/components/CompanyProfile";
 import ProgramChatModal from "@/components/ProgramChatModal";
-import VideoIntro from "@/components/VideoIntro";
 import {
   ChatMessage as ChatMessageType,
   ChatSession,
@@ -28,8 +27,6 @@ function generateId() {
 
 const PROFILE_KEY = "mpool-company-profile";
 const FAVORITES_KEY = "mpool-favorites-v2";
-const SESSIONS_KEY = "mpool-chat-sessions";
-const CHAT_HINT_DISMISSED_KEY = "mpool-chat-hint-dismissed";
 
 function normalizeStoredFavorite(value: Partial<StoredFavorite> | null): StoredFavorite | null {
   if (!value?.program?.id || !value.program.name) return null;
@@ -71,23 +68,13 @@ export default function Home() {
   const [favorites, setFavorites] = useState<StoredFavorite[]>([]);
   const [showFavorites, setShowFavorites] = useState(false);
   const [programChatTarget, setProgramChatTarget] = useState<ScoredProgram | null>(null);
-  const [chatHintDismissed, setChatHintDismissed] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Load profile + favorites from localStorage
   useEffect(() => {
     try {
       const savedProfile = localStorage.getItem(PROFILE_KEY);
-      if (savedProfile) {
-        const parsedProfile = JSON.parse(savedProfile) as CompanyProfileType;
-        setProfile(parsedProfile);
-        setFilters((prev) => ({
-          ...prev,
-          region: parsedProfile.region || prev.region,
-          unternehmensbranche: parsedProfile.branche || prev.unternehmensbranche,
-          unternehmensgroesse: parsedProfile.groesse || prev.unternehmensgroesse,
-        }));
-      }
+      if (savedProfile) setProfile(JSON.parse(savedProfile));
     } catch { /* ignore */ }
 
     try {
@@ -104,38 +91,8 @@ export default function Home() {
       }
     } catch { /* ignore */ }
 
-    try {
-      const savedSessions = localStorage.getItem(SESSIONS_KEY);
-      if (savedSessions) {
-        const parsed = JSON.parse(savedSessions);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setSessions(parsed.map((s: ChatSession) => ({
-            ...s,
-            createdAt: new Date(s.createdAt),
-            messages: s.messages.map((m: ChatMessageType) => ({
-              ...m,
-              timestamp: new Date(m.timestamp),
-            })),
-          })));
-        }
-      }
-    } catch { /* ignore */ }
-
-    try {
-      if (localStorage.getItem(CHAT_HINT_DISMISSED_KEY) === "1") {
-        setChatHintDismissed(true);
-      }
-    } catch { /* ignore */ }
-
     setProfileLoaded(true);
   }, []);
-
-  const dismissChatHint = () => {
-    setChatHintDismissed(true);
-    try {
-      localStorage.setItem(CHAT_HINT_DISMISSED_KEY, "1");
-    } catch { /* ignore */ }
-  };
 
   // Save favorites
   useEffect(() => {
@@ -143,13 +100,6 @@ export default function Home() {
       localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
     }
   }, [favorites, profileLoaded]);
-
-  // Save chat sessions
-  useEffect(() => {
-    if (profileLoaded && sessions.length > 0) {
-      localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
-    }
-  }, [sessions, profileLoaded]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -170,12 +120,9 @@ export default function Home() {
     localStorage.setItem(PROFILE_KEY, JSON.stringify(newProfile));
     setShowProfileEdit(false);
 
-    setFilters((prev) => ({
-      ...prev,
-      region: newProfile.region || prev.region,
-      unternehmensbranche: newProfile.branche || prev.unternehmensbranche,
-      unternehmensgroesse: newProfile.groesse || prev.unternehmensgroesse,
-    }));
+    if (newProfile.vorhaben && newProfile.vorhaben.trim().length > 3) {
+      handleSendMessage(newProfile.vorhaben);
+    }
   };
 
   // --- Favorite handlers (now stores full program data) ---
@@ -222,13 +169,7 @@ export default function Home() {
   };
 
   const deleteSession = (id: string) => {
-    setSessions((prev) => {
-      const updated = prev.filter((s) => s.id !== id);
-      if (updated.length === 0) {
-        localStorage.removeItem(SESSIONS_KEY);
-      }
-      return updated;
-    });
+    setSessions((prev) => prev.filter((s) => s.id !== id));
     if (activeSessionId === id) setActiveSessionId(null);
   };
 
@@ -336,17 +277,8 @@ export default function Home() {
         }),
       });
 
-      if (!res.ok) {
-        const text = await res.text();
-        let errorMsg = "Fehler bei der Anfrage";
-        try {
-          const parsed = JSON.parse(text);
-          errorMsg = parsed.error || errorMsg;
-        } catch { /* response is not JSON */ }
-        throw new Error(errorMsg);
-      }
-
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Fehler bei der Anfrage");
 
       const programs: ScoredProgram[] = data.programs || [];
       const topScore = programs.length > 0 ? programs[0].score : 0;
@@ -438,7 +370,6 @@ export default function Home() {
   // --- Main app ---
   return (
     <div className="h-screen flex flex-col">
-      <VideoIntro />
       <Header
         favoriteCount={favorites.length}
         onFavorites={() => setShowFavorites(!showFavorites)}
@@ -516,29 +447,20 @@ export default function Home() {
               )}
 
               {/* Chat messages */}
-              {!showFavorites && activeSession && (() => {
-                const firstProgramsMsgId = activeSession.messages.find(
-                  (m) => m.role === "assistant" && (m.programs?.length ?? 0) > 0
-                )?.id;
-                return (
-                  <div className="space-y-2">
-                    {activeSession.messages.map((msg) => (
-                      <ChatMessage
-                        key={msg.id}
-                        message={msg}
-                        favoriteIds={favoriteIds}
-                        onToggleFavorite={toggleFavorite}
-                        onOpenProgramChat={setProgramChatTarget}
-                        showChatHintOnFirst={
-                          !chatHintDismissed && msg.id === firstProgramsMsgId
-                        }
-                        onDismissChatHint={dismissChatHint}
-                      />
-                    ))}
-                    {isLoading && <TypingIndicator />}
-                  </div>
-                );
-              })()}
+              {!showFavorites && activeSession && (
+                <div className="space-y-2">
+                  {activeSession.messages.map((msg) => (
+                    <ChatMessage
+                      key={msg.id}
+                      message={msg}
+                      favoriteIds={favoriteIds}
+                      onToggleFavorite={toggleFavorite}
+                      onOpenProgramChat={setProgramChatTarget}
+                    />
+                  ))}
+                  {isLoading && <TypingIndicator />}
+                </div>
+              )}
 
               {/* Welcome state */}
               {!showFavorites && !activeSession && (

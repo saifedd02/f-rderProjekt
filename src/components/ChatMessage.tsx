@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import ReactMarkdown from "react-markdown";
 import { ChatMessage as ChatMessageType, ScoredProgram } from "@/lib/types";
 import ProgramCard from "./ProgramCard";
 
@@ -10,8 +9,6 @@ interface ChatMessageProps {
   favoriteIds: string[];
   onToggleFavorite: (sp: ScoredProgram) => void;
   onOpenProgramChat?: (sp: ScoredProgram) => void;
-  showChatHintOnFirst?: boolean;
-  onDismissChatHint?: () => void;
 }
 
 export default function ChatMessage({
@@ -19,8 +16,6 @@ export default function ChatMessage({
   favoriteIds,
   onToggleFavorite,
   onOpenProgramChat,
-  showChatHintOnFirst,
-  onDismissChatHint,
 }: ChatMessageProps) {
   if (message.role === "user") {
     return (
@@ -45,8 +40,8 @@ export default function ChatMessage({
             </div>
             <span className="text-xs font-medium text-gray-400">mpool Assistent</span>
           </div>
-          <div className="text-sm text-gray-700 leading-relaxed prose prose-sm max-w-none prose-headings:font-semibold prose-headings:text-gray-800 prose-strong:text-gray-800 prose-li:my-0.5">
-            <ReactMarkdown>{message.content}</ReactMarkdown>
+          <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
+            {message.content}
           </div>
         </div>
       )}
@@ -71,8 +66,6 @@ export default function ChatMessage({
               onToggleFavorite={() => onToggleFavorite(sp)}
               onOpenChat={onOpenProgramChat}
               rank={index + 1}
-              showChatHint={showChatHintOnFirst && index === 0}
-              onDismissChatHint={onDismissChatHint}
             />
           ))}
         </div>

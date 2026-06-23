@@ -1,119 +1,87 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 
-const searchSteps = [
-  { text: "Analysiere Ihr Unternehmensprofil", icon: "profile" },
-  { text: "Durchsuche Förderdatenbanken", icon: "search" },
-  { text: "Prüfe Förderkriterien & Fristen", icon: "check" },
-  { text: "Bewerte Relevanz für Ihr Vorhaben", icon: "score" },
-  { text: "Erstelle Ihre Ergebnisse", icon: "result" },
+// Steps shown while the KI searches. The backend call is a single request with
+// no streaming progress, so we advance through these on a timer to give users a
+// sense of what is happening (and keep them from getting bored). The last step
+// keeps spinning until the response arrives and this component unmounts.
+const SEARCH_STEPS = [
+  "Anfrage und Profil werden analysiert …",
+  "Durchsuche offizielle Förderdatenbanken …",
+  "Prüfe Bund-, Länder- und EU-Programme …",
+  "Gleiche mit Ihren Filtern ab …",
+  "Validiere Links und Fristen …",
+  "Stelle die besten Treffer zusammen …",
 ];
 
-function StepIcon({ type, active }: { type: string; active: boolean }) {
-  const cls = `w-4 h-4 transition-colors duration-300 ${active ? "text-blue-600" : "text-gray-300"}`;
-  switch (type) {
-    case "profile":
-      return (
-        <svg className={cls} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-        </svg>
-      );
-    case "search":
-      return (
-        <svg className={cls} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-      );
-    case "check":
-      return (
-        <svg className={cls} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      );
-    case "score":
-      return (
-        <svg className={cls} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-        </svg>
-      );
-    case "result":
-      return (
-        <svg className={cls} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-        </svg>
-      );
-    default:
-      return null;
-  }
-}
+const STEP_INTERVAL_MS = 1800;
 
 export default function TypingIndicator() {
   const [currentStep, setCurrentStep] = useState(0);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentStep((prev) => {
-        if (prev < searchSteps.length - 1) return prev + 1;
-        return prev;
-      });
-    }, 3000);
-    return () => clearInterval(interval);
+    const timer = setInterval(() => {
+      // Stop at the last step and keep it spinning until the response arrives.
+      setCurrentStep((step) => Math.min(step + 1, SEARCH_STEPS.length - 1));
+    }, STEP_INTERVAL_MS);
+    return () => clearInterval(timer);
   }, []);
 
   return (
     <div className="flex items-start gap-3 py-4 px-1 animate-fade-in">
-      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-1">
-        <svg className="w-4 h-4 text-blue-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+        <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
         </svg>
       </div>
-      <div className="bg-white rounded-xl px-5 py-4 border border-gray-100 shadow-sm min-w-[280px]">
-        <div className="flex items-center gap-2 mb-3">
+
+      <div className="bg-white rounded-xl px-4 py-3 border border-gray-100 shadow-sm min-w-[260px]">
+        <div className="flex items-center gap-2 mb-2.5">
+          <span className="text-xs font-medium text-gray-500">
+            KI durchsucht Förderprogramme
+          </span>
           <div className="flex gap-1">
-            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full typing-dot" />
-            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full typing-dot" />
-            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full typing-dot" />
+            <div className="w-1.5 h-1.5 bg-blue-400 rounded-full typing-dot" />
+            <div className="w-1.5 h-1.5 bg-blue-400 rounded-full typing-dot" />
+            <div className="w-1.5 h-1.5 bg-blue-400 rounded-full typing-dot" />
           </div>
-          <span className="text-xs font-medium text-blue-600">KI arbeitet</span>
         </div>
-        <div className="space-y-2">
-          {searchSteps.map((step, i) => {
-            const isActive = i === currentStep;
-            const isDone = i < currentStep;
-            const isPending = i > currentStep;
+
+        <ul className="space-y-1.5">
+          {SEARCH_STEPS.map((label, index) => {
+            const isDone = index < currentStep;
+            const isActive = index === currentStep;
             return (
-              <div
-                key={i}
-                className={`flex items-center gap-2.5 transition-all duration-500 ${
-                  isPending ? "opacity-30" : "opacity-100"
+              <li
+                key={label}
+                className={`flex items-center gap-2 text-xs transition-colors duration-300 ${
+                  isDone
+                    ? "text-gray-400"
+                    : isActive
+                    ? "text-gray-700 font-medium"
+                    : "text-gray-300"
                 }`}
               >
-                {isDone ? (
-                  <svg className="w-4 h-4 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                  </svg>
-                ) : (
-                  <StepIcon type={step.icon} active={isActive} />
-                )}
-                <span
-                  className={`text-xs transition-colors duration-300 ${
-                    isDone
-                      ? "text-emerald-600 line-through"
-                      : isActive
-                      ? "text-gray-800 font-medium"
-                      : "text-gray-400"
-                  }`}
-                >
-                  {step.text}
-                  {isActive && (
-                    <span className="inline-block ml-1 text-blue-500 animate-pulse">...</span>
+                <span className="w-4 h-4 flex items-center justify-center flex-shrink-0">
+                  {isDone ? (
+                    <svg className="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : isActive ? (
+                    <svg className="w-3.5 h-3.5 text-blue-500 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                  ) : (
+                    <span className="w-1.5 h-1.5 rounded-full bg-gray-200" />
                   )}
                 </span>
-              </div>
+                {label}
+              </li>
             );
           })}
-        </div>
+        </ul>
       </div>
     </div>
   );

@@ -9,8 +9,6 @@ interface ProgramCardProps {
   onToggleFavorite: (id: string) => void;
   onOpenChat?: (sp: ScoredProgram) => void;
   rank?: number;
-  showChatHint?: boolean;
-  onDismissChatHint?: () => void;
 }
 
 function getScoreStyle(score: number) {
@@ -51,8 +49,6 @@ export default function ProgramCard({
   onToggleFavorite,
   onOpenChat,
   rank,
-  showChatHint,
-  onDismissChatHint,
 }: ProgramCardProps) {
   const [expanded, setExpanded] = useState(false);
   const {
@@ -60,6 +56,7 @@ export default function ProgramCard({
     score,
     reasons,
     linkWarning,
+    linkIsGeneric,
     source,
     checkedAt,
     deadlineStatus,
@@ -71,6 +68,17 @@ export default function ProgramCard({
 
   const matchedReasons = reasons.filter((r) => r.matched);
   const unmatchedReasons = reasons.filter((r) => !r.matched);
+
+  // Always offer a direct path to the program: the resolved official link,
+  // otherwise the first specific source for THIS program. The CTA label uses
+  // the server-computed genericness of program.link (single source of truth,
+  // consistent with the link warning) rather than a separate client heuristic.
+  const primaryLink = program.link || (sourceUrls.length > 0 ? sourceUrls[0] : undefined);
+  const ctaLabel = !program.link
+    ? "Zur offiziellen Quelle"
+    : linkIsGeneric
+      ? "Zur offiziellen Förderseite"
+      : "Zum Förderprogramm";
 
   // Circle progress
   const radius = 20;
@@ -132,48 +140,15 @@ export default function ProgramCard({
         <div className="flex-shrink-0 flex items-center gap-1">
           {/* Chat button */}
           {onOpenChat && (
-            <div className="relative">
-              <button
-                onClick={() => onOpenChat(scoredProgram)}
-                className={`p-1.5 rounded-md transition-all ${
-                  showChatHint
-                    ? "text-blue-600 bg-blue-50 ring-2 ring-blue-300 animate-pulse"
-                    : "text-gray-300 hover:text-blue-500 hover:bg-blue-50"
-                }`}
-                title="Chat mit diesem Programm"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
-              </button>
-
-              {/* Hint tooltip */}
-              {showChatHint && (
-                <div className="absolute top-full right-0 mt-2 w-60 z-30 animate-fade-in-up">
-                  <div className="absolute -top-1.5 right-3 w-3 h-3 bg-white border-l border-t border-blue-200 rotate-45" />
-                  <div className="relative bg-white border border-blue-200 shadow-lg rounded-xl px-3 py-2.5 pr-7">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDismissChatHint?.();
-                      }}
-                      className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center text-gray-300 hover:text-gray-600 transition-colors"
-                      aria-label="Hinweis ausblenden"
-                    >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                    <p className="text-xs font-semibold text-gray-800 mb-0.5">
-                      Hast du Fragen zu diesem Programm?
-                    </p>
-                    <p className="text-[11px] text-gray-500 leading-snug">
-                      Klick hier, um gezielt mit der KI über dieses Förderprogramm zu chatten.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
+            <button
+              onClick={() => onOpenChat(scoredProgram)}
+              className="p-1.5 rounded-md text-gray-300 hover:text-blue-500 hover:bg-blue-50 transition-all"
+              title="Chat mit diesem Programm"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+            </button>
           )}
           {/* Favorite button */}
           <button
@@ -217,6 +192,32 @@ export default function ProgramCard({
         {program.foerderart && <InfoLine label="Förderart" value={program.foerderart} />}
         {program.frist && <InfoLine label="Frist" value={program.frist} />}
       </div>
+
+      {/* Prominent direct link to the actual program page */}
+      {primaryLink ? (
+        <div className="px-4 pb-3 pt-1">
+          <a
+            href={primaryLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors"
+          >
+            {ctaLabel}
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            </svg>
+          </a>
+          <span className="ml-2 text-[10px] text-gray-400 align-middle">
+            {(() => { try { return new URL(primaryLink).hostname.replace("www.", ""); } catch { return ""; } })()}
+          </span>
+        </div>
+      ) : (
+        <div className="px-4 pb-3 pt-1">
+          <span className="text-[10px] text-gray-400">
+            Kein direkter Programmlink gefunden — bitte über die Quellen unten prüfen.
+          </span>
+        </div>
+      )}
 
       {/* Expand for details */}
       <button
@@ -338,19 +339,6 @@ export default function ProgramCard({
               </svg>
               Fragen stellen
             </button>
-          )}
-          {program.link && (
-            <a
-              href={program.link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors"
-            >
-              {(() => { try { return new URL(program.link).hostname.replace("www.", ""); } catch { return "Zum Fördergeber"; } })()}
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-            </a>
           )}
         </div>
       </div>

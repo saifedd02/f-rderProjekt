@@ -75,8 +75,10 @@ export default function CompanyProfile({
         <div className="text-center mb-8">
           <div className="flex items-baseline justify-center gap-0 mb-4">
             <span className="text-2xl font-bold tracking-tight">
-              <span className="text-blue-600">m</span>
-              <span className="text-gray-900">pool</span>
+              <span className="text-gray-700">m</span>
+              <span className="text-blue-600">p</span>
+              <span className="text-gray-700">oo</span>
+              <span className="text-blue-600">l</span>
             </span>
             <span className="text-xs text-gray-400 ml-1.5">consulting</span>
           </div>
@@ -128,7 +130,7 @@ export default function CompanyProfile({
                   type="text"
                   value={profile.name || ""}
                   onChange={(e) => update("name", e.target.value)}
-                  placeholder="Ihr Unternehmensname"
+                  placeholder="z.B. Mustermann GmbH"
                   className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-colors"
                 />
               </div>
@@ -267,15 +269,12 @@ export default function CompanyProfile({
                 <div className="flex flex-wrap gap-1.5">
                   {[
                     "Digitalisierung",
-                    "Energieeffizienz & Erneuerbare Energien",
-                    "Energiebereitstellung",
-                    "Ressourcenmanagement",
-                    "Emissionsminderung",
-                    "Klimabilanzierung",
-                    "Nachhaltigkeitsberichterstattung",
-                    "Nachhaltiger Einkauf",
-                    "Nachhaltige Produktionsprozesse",
-                    "Nachhaltige Seminare / Weiterbildung",
+                    "Energieeffizienz",
+                    "Beratung & Coaching",
+                    "Klimaschutz",
+                    "Innovation & F&E",
+                    "Nachhaltigkeit",
+                    "Existenzgründung",
                   ].map((topic) => (
                     <button
                       key={topic}
