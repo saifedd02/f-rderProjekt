@@ -184,13 +184,17 @@ ${shownPrograms.map((n) => `- ${n}`).join("\n")}
 - Gib NIEMALS dieselben Programme wie zuvor zurück\n`
     : "";
 
+  const profileBlock = profile
+    ? `UNTERNEHMENSPROFIL:
+${formatProfile(profile)}
+
+`
+    : "";
+
   return `Heute ist der ${today}. Recherchiere aktuell aktive, HEUTE noch beantragbare Förderprogramme in Deutschland.
 Nimm KEINE ausgelaufenen Programme auf (z.B. "Digital Jetzt" und "go-digital" sind beendet).
 ${exclusionBlock}${diversityInstruction}
-UNTERNEHMENSPROFIL:
-${formatProfile(profile)}
-
-AKTIVE FILTER:
+${profileBlock}AKTIVE FILTER:
 ${formatFilters(filters)}
 
 BISHERIGE KONVERSATION:

@@ -37,50 +37,71 @@ const GENERIC_PATH_PATTERNS = [
   /\/inlandsfoerderung\/unternehmen\/energie-und-umwelt\/?$/i,
 ];
 
-const STOPWORDS = new Set([
-  "und",
-  "oder",
-  "der",
-  "die",
-  "das",
-  "dem",
-  "den",
-  "des",
-  "ein",
-  "eine",
-  "einer",
-  "einem",
-  "eines",
-  "mit",
-  "fuer",
-  "für",
-  "auf",
-  "aus",
-  "von",
-  "zum",
-  "zur",
-  "bei",
-  "im",
-  "in",
-  "am",
-  "an",
-  "wir",
-  "uns",
-  "unser",
-  "unsere",
-  "unternehmen",
-  "foerderung",
-  "förderung",
-  "foerderprogramme",
-  "förderprogramme",
-  "programm",
-  "programme",
-  "moechten",
-  "möchten",
-  "lassen",
-  "passen",
-  "passend",
-]);
+// Entries are normalized via normalizeText (umlauts stripped) because
+// extractKeywords compares AFTER normalization — raw umlaut forms never match.
+const STOPWORDS = new Set(
+  [
+    "und",
+    "oder",
+    "der",
+    "die",
+    "das",
+    "dem",
+    "den",
+    "des",
+    "ein",
+    "eine",
+    "einer",
+    "einem",
+    "eines",
+    "mit",
+    "fuer",
+    "für",
+    "auf",
+    "aus",
+    "von",
+    "zum",
+    "zur",
+    "bei",
+    "im",
+    "in",
+    "am",
+    "an",
+    "wir",
+    "uns",
+    "unser",
+    "unsere",
+    "unternehmen",
+    "foerderung",
+    "förderung",
+    "foerderprogramme",
+    "förderprogramme",
+    "programm",
+    "programme",
+    "moechten",
+    "möchten",
+    "lassen",
+    "passen",
+    "passend",
+    "welche",
+    "gibt",
+    "suche",
+    "suchen",
+    "finde",
+    "finden",
+    "wollen",
+    "brauchen",
+    "kleine",
+    "kleines",
+    "kleiner",
+    "mittlere",
+    "mittleres",
+    "grosse",
+    "große",
+    "grosses",
+    "großes",
+  ].map((word) => normalizeText(word))
+);
 
 const REGION_ALIASES: Record<string, string> = {
   deutschlandweit: "Bundesweit",
@@ -693,7 +714,14 @@ export function scoreProgramList({
     : normalizedProfile.branche;
 
   const combinedKeywords = extractKeywords(
-    [textQuery, normalizedProfile.vorhaben, effectiveBranche, normalizedFilters.foerderbereich]
+    [
+      textQuery,
+      normalizedProfile.vorhaben,
+      effectiveBranche,
+      isActiveFilter(normalizedFilters.foerderbereich)
+        ? normalizedFilters.foerderbereich
+        : "",
+    ]
       .filter(Boolean)
       .join(" ")
   );
@@ -780,8 +808,16 @@ export function scoreProgramList({
       if (combinedKeywords.length > 0) {
         maxPossible += 25;
         const semanticText = buildSemanticText(program);
-        const matchedTerms = combinedKeywords.filter((keyword) =>
-          semanticText.includes(keyword)
+        const semanticTokens = semanticText.split(" ");
+        // German compounds ("digitalisierungsfoerderung") must also match
+        // their contained stem in the program text ("digitalisierung").
+        const matchedTerms = combinedKeywords.filter(
+          (keyword) =>
+            semanticText.includes(keyword) ||
+            (keyword.length >= 8 &&
+              semanticTokens.some(
+                (token) => token.length >= 6 && keyword.includes(token)
+              ))
         );
         const textScore = Math.min(
           25,
@@ -996,7 +1032,7 @@ export function buildFallbackReply(
     const scope =
       activeFilters.length > 0
         ? `mit den aktiven Filtern (${activeFilters.join(", ")})`
-        : "für das aktuelle Profil";
+        : "für Ihre Anfrage";
 
     return `Ich habe aktuell keine guten und nach heutigem Stand aktiven Treffer ${scope} gefunden. Wahrscheinlich ist die Suche zu eng oder das Vorhaben passt nicht sauber auf die vorhandenen Programme. Versuchen Sie es mit einer allgemeineren Beschreibung oder lockern Sie einzelne Filter.`;
   }

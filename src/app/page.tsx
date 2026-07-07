@@ -8,12 +8,10 @@ import ChatMessage from "@/components/ChatMessage";
 import ChatInput from "@/components/ChatInput";
 import ProgramCard from "@/components/ProgramCard";
 import TypingIndicator from "@/components/TypingIndicator";
-import CompanyProfile from "@/components/CompanyProfile";
 import ProgramChatModal from "@/components/ProgramChatModal";
 import {
   ChatMessage as ChatMessageType,
   ChatSession,
-  CompanyProfile as CompanyProfileType,
   SearchFilters,
   ScoredProgram,
   StoredFavorite,
@@ -57,9 +55,7 @@ function normalizeStoredFavorite(value: Partial<StoredFavorite> | null): StoredF
 }
 
 export default function Home() {
-  const [profile, setProfile] = useState<CompanyProfileType | null>(null);
-  const [profileLoaded, setProfileLoaded] = useState(false);
-  const [showProfileEdit, setShowProfileEdit] = useState(false);
+  const [storageLoaded, setStorageLoaded] = useState(false);
 
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -70,11 +66,10 @@ export default function Home() {
   const [programChatTarget, setProgramChatTarget] = useState<ScoredProgram | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Load profile + favorites from localStorage
+  // Load favorites from localStorage (and clean up legacy profile data)
   useEffect(() => {
     try {
-      const savedProfile = localStorage.getItem(PROFILE_KEY);
-      if (savedProfile) setProfile(JSON.parse(savedProfile));
+      localStorage.removeItem(PROFILE_KEY);
     } catch { /* ignore */ }
 
     try {
@@ -91,15 +86,15 @@ export default function Home() {
       }
     } catch { /* ignore */ }
 
-    setProfileLoaded(true);
+    setStorageLoaded(true);
   }, []);
 
   // Save favorites
   useEffect(() => {
-    if (profileLoaded) {
+    if (storageLoaded) {
       localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
     }
-  }, [favorites, profileLoaded]);
+  }, [favorites, storageLoaded]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -113,17 +108,6 @@ export default function Home() {
 
   // Favorite IDs for quick lookup
   const favoriteIds = favorites.map((f) => f.program.id);
-
-  // --- Profile handlers ---
-  const handleProfileComplete = (newProfile: CompanyProfileType) => {
-    setProfile(newProfile);
-    localStorage.setItem(PROFILE_KEY, JSON.stringify(newProfile));
-    setShowProfileEdit(false);
-
-    if (newProfile.vorhaben && newProfile.vorhaben.trim().length > 3) {
-      handleSendMessage(newProfile.vorhaben);
-    }
-  };
 
   // --- Favorite handlers (now stores full program data) ---
   const toggleFavorite = (sp: ScoredProgram) => {
@@ -165,7 +149,6 @@ export default function Home() {
     setSessions((prev) => [newSession, ...prev]);
     setActiveSessionId(newSession.id);
     setShowFavorites(false);
-    setShowProfileEdit(false);
   };
 
   const deleteSession = (id: string) => {
@@ -210,7 +193,6 @@ export default function Home() {
     );
 
     setShowFavorites(false);
-    setShowProfileEdit(false);
     sendMessage(content, sessionId!, filters);
   };
 
@@ -270,7 +252,7 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: content,
-          profile,
+          profile: null,
           history,
           filters: currentFilters,
           shownPrograms,
@@ -350,22 +332,7 @@ export default function Home() {
   };
 
   // --- Loading state ---
-  if (!profileLoaded) return null;
-
-  // --- Onboarding: no profile yet ---
-  if (!profile) {
-    return <CompanyProfile onComplete={handleProfileComplete} />;
-  }
-
-  // --- Profile edit mode ---
-  if (showProfileEdit) {
-    return (
-      <CompanyProfile
-        existingProfile={profile}
-        onComplete={handleProfileComplete}
-      />
-    );
-  }
+  if (!storageLoaded) return null;
 
   // --- Main app ---
   return (
@@ -378,8 +345,6 @@ export default function Home() {
           setActiveSessionId(null);
           setShowFavorites(false);
         }}
-        profile={profile}
-        onEditProfile={() => setShowProfileEdit(true)}
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -471,31 +436,13 @@ export default function Home() {
                     </svg>
                   </div>
                   <h2 className="text-base font-semibold text-gray-800 mb-1">
-                    {profile.name
-                      ? `Hallo ${profile.name}!`
-                      : "Willkommen zurück!"}
+                    Willkommen beim Förderprogramm-Finder
                   </h2>
                   <p className="text-sm text-gray-400 max-w-sm mx-auto mb-6">
-                    Beschreiben Sie Ihr Vorhaben oder setzen Sie Filter. Der
-                    Finder kombiniert Profil, Filter und Förderlogik, bevor die
-                    KI die besten Treffer erklärt.
+                    Beschreiben Sie einfach Ihr Vorhaben oder setzen Sie Filter.
+                    Der Finder kombiniert Ihre Angaben mit der Förderlogik und
+                    erklärt die besten Treffer.
                   </p>
-
-                  {/* Profile summary pill */}
-                  {profile.branche && (
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 rounded-full text-xs text-blue-700 mb-6">
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                      </svg>
-                      {[
-                        profile.groesse,
-                        profile.region,
-                        profile.branche?.replace(/\(CPA.*?\)\s*/, ""),
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </div>
-                  )}
 
                   <div className="flex flex-wrap justify-center gap-2 max-w-lg mx-auto">
                     {[
