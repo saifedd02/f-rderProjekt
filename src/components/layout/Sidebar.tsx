@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { ChatSession } from "@/lib/types";
+import { ChatSession } from "@/types";
 
 interface SidebarProps {
   sessions: ChatSession[];
@@ -25,12 +25,7 @@ export default function Sidebar({
           onClick={onNewChat}
           className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
         >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -70,9 +65,7 @@ export default function Sidebar({
               <div
                 key={session.id}
                 className={`group flex items-center rounded-lg transition-colors ${
-                  activeSessionId === session.id
-                    ? "bg-blue-50"
-                    : "hover:bg-gray-50"
+                  activeSessionId === session.id ? "bg-blue-50" : "hover:bg-gray-50"
                 }`}
               >
                 <button

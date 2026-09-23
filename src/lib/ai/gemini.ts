@@ -1,4 +1,16 @@
-const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+import { createLogger } from "@/lib/utils/logger";
+
+/**
+ * Gemini client — the primary web-search provider.
+ *
+ * Current Gemini 3 models can combine Google Search and structured output in
+ * one request. We prefer that faster path and retain the proven two-pass flow
+ * as a compatibility fallback for older models/accounts.
+ */
+
+const log = createLogger("Gemini");
+
+const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.1-flash-lite";
 
 interface GeminiRequestOptions {
   prompt: string;
@@ -71,11 +83,7 @@ async function requestGemini({
   maxOutputTokens = 2048,
 }: GeminiRequestOptions) {
   const models = Array.from(
-    new Set([
-      DEFAULT_GEMINI_MODEL,
-      "gemini-2.5-flash",
-      "gemini-2.5-flash-lite",
-    ])
+    new Set([DEFAULT_GEMINI_MODEL, "gemini-2.5-flash", "gemini-2.5-flash-lite"])
   );
 
   let lastError = "Gemini-Anfrage fehlgeschlagen.";
@@ -98,7 +106,7 @@ async function requestGemini({
       body.tools = [{ google_search: {} }];
     }
 
-    if (jsonSchema && !grounded) {
+    if (jsonSchema) {
       body.generationConfig = {
         ...(body.generationConfig as Record<string, unknown>),
         responseMimeType: "application/json",
@@ -144,13 +152,44 @@ async function requestGemini({
 export async function generateGroundedJson<T>(
   prompt: string,
   jsonSchema: Record<string, unknown>,
-  options?: { temperature?: number }
-): Promise<{ parsed: T; raw: Record<string, any> }> {
+  options?: {
+    temperature?: number;
+    /** Field rules for the formatter pass — the same text the search prompt carries. */
+    extractionRules?: string;
+  }
+): Promise<{ parsed: T; raw: Record<string, any>; path: "combined" | "two-pass" }> {
   const searchTemperature = options?.temperature ?? 0.2;
+
+  // Fast path: Gemini 3 can search and obey a JSON schema in the same call.
+  // If an account/model combination does not support it, the catch below uses
+  // the established grounded-research + formatter flow.
+  try {
+    const combinedRaw = await requestGemini({
+      prompt:
+        prompt +
+        "\n\nNutze die Google-Suche. Gib ausschließlich JSON im vorgegebenen Schema zurück.",
+      jsonSchema,
+      grounded: true,
+      temperature: searchTemperature,
+      maxOutputTokens: 8192,
+    });
+    const combinedText = extractText(combinedRaw);
+    if (!combinedText) throw new Error("Leere kombinierte Gemini-Antwort.");
+    const parsed = safeJsonParse<T>(combinedText);
+    log.info("combined grounded+JSON path | parsed programs:", countPrograms(parsed));
+    return {
+      parsed,
+      raw: { grounded: combinedRaw, formatted: combinedRaw },
+      path: "combined",
+    };
+  } catch (error) {
+    log.warn("combined grounded+JSON path unavailable; using two-pass fallback:", error);
+  }
 
   // Pass 1: Grounded web search — ask for PROSE only, no JSON
   // Append instruction to avoid JSON in grounded mode (Gemini can't do it reliably)
-  const searchPrompt = prompt +
+  const searchPrompt =
+    prompt +
     "\n\nWICHTIG: Antworte in normalem Fließtext. Kein JSON. Kein Code. " +
     "Liste jeden gefundenen Förderprogramm-Namen fett auf (**Name**) und beschreibe Details darunter.";
 
@@ -166,9 +205,10 @@ export async function generateGroundedJson<T>(
     throw new Error("Gemini hat keine verwertbare grounded Antwort zurückgegeben.");
   }
 
-  console.log("[Gemini] Grounded text length:", groundedText.length);
+  log.info("grounded text length:", groundedText.length);
 
-  // Pass 2: ALWAYS format the grounded prose into structured JSON using schema enforcement
+  // Pass 2: format the grounded prose into the SAME schema and rules. Kept only
+  // as a fallback for models/accounts without the combined path.
   const sources = extractGroundingSources(groundedRaw);
 
   // Strip any accidental JSON/code blocks from grounded text before sending to formatter
@@ -177,42 +217,11 @@ export async function generateGroundedJson<T>(
     .replace(/```[\s\S]*?```/g, "")
     .trim();
 
-  const formatterPrompt = `Du erhältst einen Recherchetext über deutsche Förderprogramme und musst daraus strukturierte JSON-Daten extrahieren.
-
-AUFGABE:
-- Lies den Recherchetext sorgfältig
-- Extrahiere JEDES genannte Förderprogramm als eigenen Eintrag in "programs"
-- Für jedes Programm fülle alle bekannten Felder aus
-- "reply" = eine Zusammenfassung in 2-3 Absätzen auf Deutsch
-
-REGELN FÜR PROGRAMME:
-- name: offizieller Programmname (PFLICHT)
-- beschreibung: 1-2 Sätze was gefördert wird
-- foerderhoehe: z.B. "bis 50.000 EUR" oder "bis 80% Zuschuss"
-- zielgruppe: wer kann beantragen
-- region: Bundesweit, Bayern, NRW etc.
-- frist: Antragsfrist oder "laufend"
-- foerderbereich: Kategorie (Digitalisierung, Energie etc.)
-- foerderart: Zuschuss, Kredit, Bürgschaft etc.
-- quelle: Fördergeber (KfW, BAFA, BMWK etc.)
-- score: 0-100, Relevanz für das Nutzerprofil
-- reasons: 2-4 kurze Bewertungen mit label (Text) und matched (true=positiv, false=Warnung)
-
-LINKS — EXTREM WICHTIG:
-- link: NUR URLs die EXAKT so in den Quellen oder im Recherchetext stehen
-- Wenn keine URL im Text steht → link = leerer String ""
-- NIEMALS Links raten, konstruieren oder aus dem Gedächtnis erfinden
-- Lieber KEIN Link als ein falscher Link!
-
-- Unbekannte Felder = leerer String ""
-- Programme nach score ABSTEIGEND sortieren
-- Es MÜSSEN Programme extrahiert werden wenn welche im Text stehen!
-
-QUELLEN:
-${sources || "Keine strukturierten Quellen."}
-
-RECHERCHETEXT:
-${cleanedGroundedText}`;
+  const formatterPrompt = buildExtractionPrompt(
+    cleanedGroundedText,
+    sources,
+    options?.extractionRules ?? ""
+  );
 
   const formattedRaw = await requestGemini({
     prompt: formatterPrompt,
@@ -228,7 +237,7 @@ ${cleanedGroundedText}`;
   }
 
   const parsed = safeJsonParse<T>(formattedText);
-  console.log("[Gemini] Parsed programs count:", (parsed as any)?.programs?.length ?? 0);
+  log.info("parsed programs:", countPrograms(parsed));
 
   return {
     parsed,
@@ -236,79 +245,8 @@ ${cleanedGroundedText}`;
       grounded: groundedRaw,
       formatted: formattedRaw,
     },
+    path: "two-pass",
   };
-}
-
-/**
- * Format raw search text (e.g. from Perplexity) into structured JSON using Gemini.
- * This is Pass 2 only — no web search, just JSON extraction from existing prose.
- */
-export async function formatToJson<T>(
-  searchText: string,
-  citations: string[],
-  jsonSchema: Record<string, unknown>
-): Promise<T> {
-  const cleanedText = searchText
-    .replace(/```json[\s\S]*?```/g, "")
-    .replace(/```[\s\S]*?```/g, "")
-    .trim();
-
-  const sourcesBlock =
-    citations.length > 0
-      ? citations.map((url, i) => `- [${i + 1}] ${url}`).join("\n")
-      : "Keine strukturierten Quellen.";
-
-  const formatterPrompt = `Du erhältst einen Recherchetext über deutsche Förderprogramme und musst daraus strukturierte JSON-Daten extrahieren.
-
-AUFGABE:
-- Lies den Recherchetext sorgfältig
-- Extrahiere JEDES genannte Förderprogramm als eigenen Eintrag in "programs"
-- Für jedes Programm fülle alle bekannten Felder aus
-- "reply" = eine Zusammenfassung in 2-3 Absätzen auf Deutsch
-
-REGELN FÜR PROGRAMME:
-- name: offizieller Programmname (PFLICHT)
-- beschreibung: 1-2 Sätze was gefördert wird
-- foerderhoehe: z.B. "bis 50.000 EUR" oder "bis 80% Zuschuss"
-- zielgruppe: wer kann beantragen
-- region: Bundesweit, Bayern, NRW etc.
-- frist: Antragsfrist oder "laufend"
-- foerderbereich: Kategorie (Digitalisierung, Energie etc.)
-- foerderart: Zuschuss, Kredit, Bürgschaft etc.
-- quelle: Fördergeber (KfW, BAFA, BMWK etc.)
-
-LINKS — EXTREM WICHTIG:
-- link: NUR URLs die EXAKT so in den Quellen unten stehen
-- Wenn keine passende URL in den Quellen steht → link = leerer String ""
-- NIEMALS Links raten, konstruieren oder aus dem Gedächtnis erfinden
-- Lieber KEIN Link als ein falscher Link!
-
-- Unbekannte Felder = leerer String ""
-- Es MÜSSEN Programme extrahiert werden wenn welche im Text stehen!
-
-VERIFIZIERTE QUELLEN-URLS (nur diese verwenden!):
-${sourcesBlock}
-
-RECHERCHETEXT:
-${cleanedText}`;
-
-  const formattedRaw = await requestGemini({
-    prompt: formatterPrompt,
-    jsonSchema,
-    grounded: false,
-    temperature: 0,
-    maxOutputTokens: 8192,
-  });
-
-  const formattedText = extractText(formattedRaw);
-  if (!formattedText) {
-    throw new Error("Gemini hat keine JSON-Struktur zurückgegeben.");
-  }
-
-  const parsed = safeJsonParse<T>(formattedText);
-  console.log("[Gemini] formatToJson — programs:", (parsed as any)?.programs?.length ?? 0);
-
-  return parsed;
 }
 
 export async function generateGeminiText(
@@ -326,4 +264,39 @@ export async function generateGeminiText(
     text: extractText(raw),
     raw,
   };
+}
+
+/** Number of programs in a parsed response, for logging only. */
+function countPrograms(parsed: unknown): number {
+  const programs = (parsed as { programs?: unknown[] } | null)?.programs;
+  return Array.isArray(programs) ? programs.length : 0;
+}
+
+/**
+ * Pass-2 prompt: turn research prose into the structured program schema.
+ *
+ * Extraction only — nothing may be added that the text does not say. An empty
+ * program list is a valid answer; a program that was never researched is not.
+ */
+function buildExtractionPrompt(
+  researchText: string,
+  sources: string,
+  extractionRules: string
+): string {
+  return `Du erhältst einen Recherchetext über deutsche Förderprogramme und überführst ihn in das vorgegebene JSON-Schema.
+
+AUFGABE:
+- Übernimm jedes im Text genannte Förderprogramm als eigenen Eintrag in "programs".
+- Übernimm nur, was der Text sagt. Fehlt eine Angabe, bleibt das Feld leer bzw. UNBEKANNT.
+- "reply" = eine kurze Zusammenfassung auf Deutsch.
+
+${extractionRules}
+
+LINKS: nur URLs, die EXAKT so in den Quellen oder im Recherchetext stehen, sonst "".
+
+QUELLEN:
+${sources || "Keine strukturierten Quellen."}
+
+RECHERCHETEXT:
+${researchText}`;
 }

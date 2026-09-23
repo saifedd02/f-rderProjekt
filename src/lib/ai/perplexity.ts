@@ -1,3 +1,7 @@
+import { PERPLEXITY_SEARCH_DOMAINS } from "@/config/sources";
+import type { ExtractedProgram } from "@/lib/facts/web";
+import { createLogger } from "@/lib/utils/logger";
+
 // Perplexity Sonar integration.
 //
 // Uses sonar-pro (current best model for citation-rich research) with:
@@ -12,6 +16,8 @@
 // Optional env knobs (all off by default to protect recall for a multi-region
 // finder): PERPLEXITY_MODEL, PERPLEXITY_DOMAIN_FILTER (comma-separated
 // allowlist), PERPLEXITY_RECENCY (hour|day|week|month|year).
+
+const log = createLogger("Perplexity");
 
 const PERPLEXITY_MODEL = process.env.PERPLEXITY_MODEL || "sonar-pro";
 
@@ -36,6 +42,7 @@ interface PerplexityResponse {
   choices: PerplexityChoice[];
   citations?: string[];
   search_results?: PerplexityRawSearchResult[];
+  usage?: { prompt_tokens?: number; completion_tokens?: number; cost?: unknown };
 }
 
 function getApiKey(): string {
@@ -62,108 +69,38 @@ export interface PerplexitySource {
 }
 
 /** A program as emitted by the model, with 1-based indices into `searchResults`. */
-export interface PerplexityProgram {
-  name: string;
-  beschreibung?: string;
-  foerderhoehe?: string;
-  zielgruppe?: string;
-  region?: string;
-  frist?: string;
-  foerderbereich?: string;
-  foerderart?: string;
-  quelle?: string;
-  /** Official program URL the model asserts (validated server-side). */
-  link?: string;
-  /** 1-based indices into `searchResults` that back THIS program. */
-  sourceIndices?: number[];
-  /** Model's own status read: "aktiv" | "ausgelaufen" | "unbekannt". */
-  status?: string;
-  unternehmensgroesse?: string[];
-  unternehmensbranche?: string[];
-}
+export type PerplexityProgram = ExtractedProgram;
 
 export interface PerplexityProgramSearch {
   reply: string;
   programs: PerplexityProgram[];
   searchResults: PerplexitySource[];
   citations: string[];
+  /** The untouched API response, for the raw-response log and the benchmark. */
+  raw: unknown;
+  model: string;
+  usage?: { prompt_tokens?: number; completion_tokens?: number; cost?: unknown };
 }
 
-// ── Structured-output schema (reused so Perplexity caches the compiled schema) ──
-
-const PROGRAM_RESPONSE_SCHEMA = {
-  type: "object",
-  additionalProperties: false,
-  properties: {
-    reply: { type: "string" },
-    programs: {
-      type: "array",
-      items: {
-        type: "object",
-        additionalProperties: false,
-        properties: {
-          name: { type: "string" },
-          beschreibung: { type: "string" },
-          foerderhoehe: { type: "string" },
-          zielgruppe: { type: "string" },
-          region: { type: "string" },
-          frist: { type: "string" },
-          foerderbereich: { type: "string" },
-          foerderart: { type: "string" },
-          quelle: { type: "string" },
-          link: { type: "string" },
-          status: { type: "string" },
-          sourceIndices: { type: "array", items: { type: "integer" } },
-          unternehmensgroesse: { type: "array", items: { type: "string" } },
-          unternehmensbranche: { type: "array", items: { type: "string" } },
-        },
-        required: ["name", "link", "status", "sourceIndices"],
-      },
-    },
-  },
-  required: ["reply", "programs"],
-} as const;
-
-const SYSTEM_PROMPT = `Du bist ein Experte für deutsche Förderprogramme (Bund, Länder, EU). Du recherchierst ausschließlich aktuelle, real existierende und HEUTE noch beantragbare Programme aus dem Web.
+const SYSTEM_PROMPT = `Du bist ein Experte für deutsche Förderprogramme (Bund, Länder, EU). Du recherchierst real existierende Programme aus dem Web und berichtest ihre Fakten so, wie die Quellen sie nennen.
 
 REGELN:
-- Nenne NUR Programme, die zum heutigen Datum noch beantragbar bzw. aktiv sind.
-- Nimm AUSGELAUFENE/EINGESTELLTE Programme NICHT auf. Beispiele für beendete Programme, die du NICHT als aktiv nennen darfst: "Digital Jetzt" (Richtlinie zum 31.12.2023 ausgelaufen) und "go-digital" (zum 31.12.2024 beendet).
+- Nenne nur Programme, die nach den Quellen HEUTE beantragt werden können, und keine bekannten beendeten Programme (z. B. "Digital Jetzt", "go-digital").
 - Bevorzuge offizielle Quellen: foerderdatenbank.de, KfW, BAFA, BMWK/BMWE, foerderinfo.bund.de, Landesförderbanken, EU-Portale.
-- Beachte die Unternehmensgröße: Reine KMU-Programme (< 250 Beschäftigte) passen NICHT zu großen Unternehmen ab 250 Beschäftigten. Nenne für große Unternehmen passende Instrumente (z.B. KfW-Förderkredite mit Umsatzgrenzen statt KMU-Grenzen).
-- Für jedes Programm: setze "status" auf "aktiv", wenn es nachweislich noch beantragbar ist, sonst "unbekannt". Nenne keine Programme mit status "ausgelaufen".
-- "link": die EXAKTE offizielle Programm-URL. Erfinde KEINE URLs. Wenn unsicher, leeren String setzen.
+- Fakten stammen ausschließlich aus den Quellen, nie aus der Nutzeranfrage oder den Filtern. UNBEKANNT ist eine gültige Antwort.
 - "sourceIndices": die Nummern der Quellen (1-basiert), die DIESES konkrete Programm belegen.
 - Antworte vollständig auf Deutsch und ausschließlich im vorgegebenen JSON-Format.`;
 
-// Default allowlist of official German/EU funding domains. Empirically needed:
-// Sonar otherwise cites commercial advisor blogs heavily, which we then have to
-// discard — leaving programs with no link. foerderdatenbank.de is the universal
-// federal aggregator (covers Bund + Länder) and its program pages are specific
-// and official, so a small allowlist still gives broad coverage. Overridable via
-// PERPLEXITY_DOMAIN_FILTER; set it to "off" to disable filtering entirely.
-const DEFAULT_DOMAIN_FILTER = [
-  "foerderdatenbank.de",
-  "foerderinfo.bund.de",
-  "kfw.de",
-  "bafa.de",
-  "bundeswirtschaftsministerium.de",
-  "bmwk.de",
-  "zim.de",
-  "mittelstand-digital.de",
-  "ec.europa.eu",
-  "europa.eu",
-];
-
+/** The domain allowlist to send, honouring the PERPLEXITY_DOMAIN_FILTER override. */
 function buildDomainFilter(): string[] | undefined {
   const raw = process.env.PERPLEXITY_DOMAIN_FILTER;
-  if (raw === undefined) return DEFAULT_DOMAIN_FILTER;
+  if (raw === undefined) return PERPLEXITY_SEARCH_DOMAINS;
   if (raw.trim().toLowerCase() === "off") return undefined;
   const domains = raw
     .split(",")
     .map((d) => d.trim())
     .filter(Boolean);
-  return domains.length > 0 ? domains : DEFAULT_DOMAIN_FILTER;
+  return domains.length > 0 ? domains : PERPLEXITY_SEARCH_DOMAINS;
 }
 
 function stripThinkBlock(text: string): string {
@@ -225,7 +162,7 @@ function normalizeSearchResults(
  */
 export async function searchFoerderprogramme(
   prompt: string,
-  options?: { temperature?: number }
+  options: { temperature?: number; schema: Record<string, unknown> }
 ): Promise<PerplexityProgramSearch> {
   const temperature = options?.temperature ?? 0.1;
 
@@ -244,7 +181,7 @@ export async function searchFoerderprogramme(
     return_related_questions: false,
     response_format: {
       type: "json_schema",
-      json_schema: { name: "foerderprogramme", schema: PROGRAM_RESPONSE_SCHEMA },
+      json_schema: { name: "foerderprogramme", schema: options.schema },
     },
   };
 
@@ -267,7 +204,7 @@ export async function searchFoerderprogramme(
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     const errorMsg =
-      (errorData as Record<string, any>)?.error?.message ||
+      (errorData as { error?: { message?: string } })?.error?.message ||
       `Perplexity-Anfrage fehlgeschlagen (${response.status})`;
     throw new Error(errorMsg);
   }
@@ -279,8 +216,8 @@ export async function searchFoerderprogramme(
   const searchResults = normalizeSearchResults(data.search_results);
   const citations = Array.isArray(data.citations) ? data.citations : [];
 
-  console.log(
-    "[Perplexity] model:",
+  log.info(
+    "model:",
     PERPLEXITY_MODEL,
     "| programs:",
     programs.length,
@@ -290,5 +227,13 @@ export async function searchFoerderprogramme(
     citations.length
   );
 
-  return { reply, programs, searchResults, citations };
+  return {
+    reply,
+    programs,
+    searchResults,
+    citations,
+    raw: data,
+    model: PERPLEXITY_MODEL,
+    usage: data.usage,
+  };
 }

@@ -1,19 +1,24 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { ScoredProgram } from "@/lib/types";
+import { askAboutProgram } from "@/lib/api-client";
+import type { ScoredProgram } from "@/types";
 
 interface ProgramChatModalProps {
   scoredProgram: ScoredProgram;
   onClose: () => void;
 }
 
+/** A turn in the per-program conversation. Kept local — it is not persisted. */
 interface Message {
   role: "user" | "assistant";
   content: string;
 }
 
-export default function ProgramChatModal({ scoredProgram, onClose }: ProgramChatModalProps) {
+export default function ProgramChatModal({
+  scoredProgram,
+  onClose,
+}: ProgramChatModalProps) {
   const { program } = scoredProgram;
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -38,23 +43,13 @@ export default function ProgramChatModal({ scoredProgram, onClose }: ProgramChat
     setIsLoading(true);
 
     try {
-      const res = await fetch("/api/program-chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: content,
-          program,
-          history: messages,
-        }),
+      const reply = await askAboutProgram({
+        message: content,
+        program,
+        history: messages,
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Fehler");
-
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: data.reply },
-      ]);
+      setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
     } catch (error) {
       setMessages((prev) => [
         ...prev,
@@ -93,23 +88,47 @@ export default function ProgramChatModal({ scoredProgram, onClose }: ProgramChat
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <div className="w-6 h-6 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-                <svg className="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                <svg
+                  className="w-3.5 h-3.5 text-blue-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                  />
                 </svg>
               </div>
               <span className="text-xs font-medium text-blue-600">Programm-Chat</span>
             </div>
-            <h2 className="text-sm font-semibold text-gray-900 leading-snug">{program.name}</h2>
+            <h2 className="text-sm font-semibold text-gray-900 leading-snug">
+              {program.name}
+            </h2>
             {program.quelle && (
-              <span className="text-[10px] text-gray-400 mt-0.5 block">{program.quelle}</span>
+              <span className="text-[10px] text-gray-400 mt-0.5 block">
+                {program.quelle}
+              </span>
             )}
           </div>
           <button
             onClick={onClose}
             className="flex-shrink-0 p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -157,8 +176,14 @@ export default function ProgramChatModal({ scoredProgram, onClose }: ProgramChat
               <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
                 <div className="flex items-center gap-1.5">
                   <div className="typing-dot w-1.5 h-1.5 bg-gray-400 rounded-full" />
-                  <div className="typing-dot w-1.5 h-1.5 bg-gray-400 rounded-full" style={{ animationDelay: "0.2s" }} />
-                  <div className="typing-dot w-1.5 h-1.5 bg-gray-400 rounded-full" style={{ animationDelay: "0.4s" }} />
+                  <div
+                    className="typing-dot w-1.5 h-1.5 bg-gray-400 rounded-full"
+                    style={{ animationDelay: "0.2s" }}
+                  />
+                  <div
+                    className="typing-dot w-1.5 h-1.5 bg-gray-400 rounded-full"
+                    style={{ animationDelay: "0.4s" }}
+                  />
                 </div>
               </div>
             </div>
@@ -192,12 +217,33 @@ export default function ProgramChatModal({ scoredProgram, onClose }: ProgramChat
             >
               {isLoading ? (
                 <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                  />
                 </svg>
               ) : (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19V5m0 0l-5 5m5-5l5 5" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 19V5m0 0l-5 5m5-5l5 5"
+                  />
                 </svg>
               )}
             </button>

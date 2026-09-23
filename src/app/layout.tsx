@@ -6,11 +6,7 @@ export const metadata: Metadata = {
   description: "Finden Sie passende Förderprogramme für Ihr Unternehmen",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="de">
       <body>{children}</body>

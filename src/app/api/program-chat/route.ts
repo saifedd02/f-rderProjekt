@@ -1,67 +1,40 @@
-import { NextRequest, NextResponse } from "next/server";
-import { generateGeminiText } from "@/lib/gemini";
-import { Foerderprogramm } from "@/lib/types";
+import { NextResponse, type NextRequest } from "next/server";
+import { generateGeminiText } from "@/lib/ai/gemini";
+import { buildProgramChatPrompt } from "@/server/program-chat/prompt";
+import { createLogger } from "@/lib/utils/logger";
+import type { ChatHistoryEntry, Foerderprogramm } from "@/types";
 
-function buildProgramPrompt(
-  message: string,
-  program: Foerderprogramm,
-  history?: Array<{ role: string; content: string }>
-) {
-  const historyText =
-    history && history.length > 0
-      ? history
-          .slice(-8)
-          .map((entry) =>
-            `${entry.role === "assistant" ? "Assistent" : "Nutzer"}: ${entry.content}`
-          )
-          .join("\n")
-      : "Keine vorherige Konversation.";
+/**
+ * POST /api/program-chat — answer a follow-up question about ONE program.
+ *
+ * Grounded so the model can check current deadlines and conditions rather than
+ * answering from memory.
+ */
 
-  return `Du bist ein präziser Förderprogramm-Experte. Recherchiere bei Bedarf im Web nach aktuellen Details zu diesem Programm und beantworte die Frage des Nutzers auf Deutsch.
+const log = createLogger("API:program-chat");
 
-REGELN:
-- Nutze den bekannten Programmkontekt als Ausgangspunkt
-- Prüfe aktuelle Informationen über Websuche, wenn es um Fristen, Förderhöhe, Antragstellung oder Voraussetzungen geht
-- Wenn etwas unklar ist, sage das offen
-- Antworte kurz, konkret und ohne Floskeln
-
-PROGRAMMKONTEXT:
-- Name: ${program.name}
-${program.beschreibung ? `- Beschreibung: ${program.beschreibung}` : ""}
-${program.foerderhoehe ? `- Förderhöhe: ${program.foerderhoehe}` : ""}
-${program.zielgruppe ? `- Zielgruppe: ${program.zielgruppe}` : ""}
-${program.region ? `- Region: ${program.region}` : ""}
-${program.frist ? `- Frist: ${program.frist}` : ""}
-${program.foerderbereich ? `- Förderbereich: ${program.foerderbereich}` : ""}
-${program.foerderart ? `- Förderart: ${program.foerderart}` : ""}
-${program.link ? `- Bekannter Link: ${program.link}` : ""}
-${program.quelle ? `- Bekannte Quelle: ${program.quelle}` : ""}
-
-BISHERIGE KONVERSATION:
-${historyText}
-
-AKTUELLE FRAGE:
-${message}`;
+interface ProgramChatRequestBody {
+  message?: unknown;
+  program?: Foerderprogramm;
+  history?: ChatHistoryEntry[];
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, program, history } = await request.json();
+    const body = (await request.json()) as ProgramChatRequestBody;
 
-    if (!message || !program) {
+    if (typeof body.message !== "string" || !body.message.trim() || !body.program?.name) {
       return NextResponse.json(
         { error: "Nachricht und Programm sind erforderlich" },
         { status: 400 }
       );
     }
 
+    // Gemini 3 counts its thinking tokens against maxOutputTokens (~600–1000
+    // here); at 1200 the visible answer was cut off mid-sentence (MAX_TOKENS).
     const { text } = await generateGeminiText(
-      buildProgramPrompt(message, program, history),
-      {
-        grounded: true,
-        temperature: 0.2,
-        maxOutputTokens: 1200,
-      }
+      buildProgramChatPrompt(body.message, body.program, body.history),
+      { grounded: true, temperature: 0.2, maxOutputTokens: 4096 }
     );
 
     return NextResponse.json({
@@ -70,12 +43,8 @@ export async function POST(request: NextRequest) {
         "Ich konnte leider keine Antwort generieren. Bitte versuchen Sie es erneut.",
     });
   } catch (error: unknown) {
-    console.error("Program chat error:", error);
-    const errorMessage =
-      error instanceof Error ? error.message : "Unbekannter Fehler";
-    return NextResponse.json(
-      { error: "Fehler: " + errorMessage },
-      { status: 500 }
-    );
+    log.error("request failed:", error);
+    const detail = error instanceof Error ? error.message : "Unbekannter Fehler";
+    return NextResponse.json({ error: `Fehler: ${detail}` }, { status: 500 });
   }
 }
