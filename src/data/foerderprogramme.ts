@@ -1,136 +1,15 @@
-export interface DbFoerderprogramm {
-  id: string;
-  name: string;
-  beschreibung: string;
-  foerderhoehe: string;
-  zielgruppe: string;
-  region: string;
-  /** Use ISO dates like "2026-12-31", "laufend", or "ended:2023-12-31" */
-  frist: string;
-  foerderbereich: string;
-  unternehmensbranche: string[];
-  foerderart: string;
-  unternehmensgroesse: string[];
-  link: string;
-  isActive: boolean;
-  quelle: string;
-}
+import type { DbFoerderprogramm } from "@/types/database";
 
-export const regionen = [
-  "Alle Regionen",
-  "Bundesweit",
-  "Baden-Württemberg",
-  "Bayern",
-  "Berlin",
-  "Brandenburg",
-  "Bremen",
-  "Niedersachsen",
-  "Sachsen-Anhalt",
-  "Hamburg",
-  "Hessen",
-  "Mecklenburg-Vorpommern",
-  "Nordrhein-Westfalen",
-  "Rheinland-Pfalz",
-  "Saarland",
-  "Sachsen",
-  "Schleswig-Holstein",
-  "Thüringen",
-];
-
-export const foerderbereiche = [
-  "Alle Kategorien",
-  "Digitalisierung",
-  "Nachhaltigkeitsberichterstattung",
-  "Klimabilanzierung",
-  "Nachhaltige technologische Entwicklung in Produktionsprozessen",
-  "Nachhaltiger Einkauf",
-  "Nachhaltige Seminare",
-  "Maßnahmen zu Emissionsminderung",
-  "Ressourcenmanagement",
-  "Energiebereitstellung",
-  "Energieeffizienz & Erneuerbare Energien",
-];
-
-export const branchen = [
-  "Alle auswählen",
-  "(CPA A 01) Landwirtschaft und Jagd",
-  "(CPA A 02) Forstwirtschaft und Holzeinschlag",
-  "(CPA A 03) Fischerei und Aquakultur",
-  "(CPA B 05) Kohlenbergbau",
-  "(CPA B 06) Gewinnung von Erdöl und Erdgas",
-  "(CPA B 07-09) Erzbergbau, Gewinnung von Steinen und Erden, sonstiger Bergbau",
-  "(CPA C 10-12) H.v. Nahrungsmitteln und Getränken; Tabakverarb.",
-  "(CPA C 13-15) H.v. Textilien, Bekleidung, Leder und Lederwaren, Schuhen",
-  "(CPA C 16) H.v. Holz-, Flecht-, Korb- und Korkwaren (ohne Möbel)",
-  "(CPA C 17) H.v. Papier, Pappe und Waren daraus",
-  "(CPA C 18) H.v. Druckerzeugnissen, Vervielf. Von Ton-, Bild-, Datenträgern",
-  "(CPA C 19) Kokerei und Mineralölverarbeitung",
-  "(CPA C 20) H.v. chemischen Erzeugnissen",
-  "(CPA C 21) H.v. pharmazeutischen Erzeugnissen",
-  "(CPA C 22) H.v. Gummi- und Kunststoffwaren",
-  "(CPA C 23.1) H.v. Glas und Glaswaren",
-  "(CPA C 23.2-9) H.v. Keramik, Verarb. Von Steinen und Erden",
-  "(CPA C 25) H.v. Metallerzeugnissen",
-  "(CPA C 26) H.v. DV-Geräten, elektronischen und optischen Erzeugnissen",
-  "(CPA C 27) H.v. elektrischen Ausrüstungen",
-  "(CPA C 28) Maschinenbau",
-  "(CPA C 29) H.v. Kraftwagen und Kraftwagenteilen",
-  "(CPA C 30) Sonstiger Fahrzeugbau",
-  "(CPA C 31-32) H.v. Möbeln und sonstigen Waren",
-  "(CPA C 33) Reparatur und Installation von Maschinen und Ausrüstungen",
-  "(CPA D 35.2) Elektrizitätsversorgung, Wärme- und Kälteversorgung",
-  "(CPA D 35.2) Gasversorgung",
-  "(CPA E 36) Wasserversorgung",
-  "(CPA E 37-39) Abwasser-, Abfallentsorgung, Rückgewinnung",
-  "(CPA F 43) Vorb. Baustellenarbeiten, Bauinstallation, sonstiger",
-  "(CPA G 45) Kfz-Handel; Instandhaltung und Reparatur von Kfz",
-  "(CPA G 46) Großhandel (ohne Handel mit Kfz)",
-  "(CPA G 47) Einzelhandel (ohne Handel mit Kfz)",
-  "(CPA H 50) Schifffahrt",
-  "(CPA H 51) Luftfahrt",
-  "(CPA H 52) Lagerei und sonstige Dienstleistungen für den Verkehr",
-  "(CPA H 53) Post-, Kurier- und Expressdienste",
-  "(CPA I) Gastgewerbe",
-  "(CPA J) Information und Kommunikation",
-  "(CPA K) Finanz- und Versicherungsdienstleistungen",
-  "(CPA L) Grundstücks- und Wohnungswesen",
-  "(CPA M 69-72) Freiberufliche, wissenschaftliche und technische Dienstleistungen",
-  "(CPA M 73-75, N) Sonstige wirtschaftliche Dienstleistungen",
-  "(CPA O) Öffentliche Verwaltung, Verteidigung; Sozialversicherung",
-  "(CPA P) Erziehung und Unterricht",
-  "(CPA Q) Gesundheits- und Sozialwesen",
-  "(CPA R-T) Sonstige Dienstleistungen",
-];
-
-export const foerderarten = [
-  "Alle auswählen",
-  "Zuschuss",
-  "Kredit / Darlehen",
-  "Bürgschaft",
-  "Beteiligung",
-  "Beratung / Coaching",
-  "Steuervergünstigung",
-];
-
-export const unternehmensgroessen = [
-  "Alle auswählen",
-  "Großes Unternehmen",
-  "Mittleres Unternehmen",
-  "Kleines Unternehmen",
-  "Kleinstunternehmen",
-];
-
-export const unternehmensgroessenInfo: Record<string, string> = {
-  "Großes Unternehmen":
-    "Mehr als 1.000 Beschäftigte und entweder einen Umsatz von über 50 Millionen € oder eine Bilanzsumme von über 25 Millionen €",
-  "Mittleres Unternehmen":
-    "Wenn zwei der folgenden Schwellenwerte nicht überschritten sind: 25 Mio. € Bilanzsumme; 50 Mio. € Nettoumsatz; durchschnittlich 250 Mitarbeiter",
-  "Kleines Unternehmen":
-    "Wenn zwei der folgenden Schwellenwerte nicht überschritten sind: 5 Mio. € Bilanzsumme; 10 Mio. € Nettoumsatz; durchschnittlich 50 Mitarbeiter",
-  "Kleinstunternehmen":
-    "Wenn zwei der folgenden Schwellenwerte nicht überschritten sind: 450.000 € Bilanzsumme; 900.000 € Nettoumsatz; durchschnittlich 10 Mitarbeiter",
-};
-
+/**
+ * Curated Förderprogramm database.
+ *
+ * Hand-maintained and deliberately small: it is not the primary search index
+ * (that is the live web search) but the trusted reference the web results are
+ * reconciled against — it knows which well-known programs have ENDED and which
+ * official links are verified. See `lib/search/reconcile.ts`.
+ *
+ * Mark an ended program with `frist: "ended:YYYY-MM-DD"` and `isActive: false`.
+ */
 export const foerderprogramme: DbFoerderprogramm[] = [
   {
     id: "db-1",
@@ -142,9 +21,12 @@ export const foerderprogramme: DbFoerderprogramm[] = [
     region: "Bundesweit",
     frist: "laufend",
     foerderbereich: "Digitalisierung",
-    unternehmensbranche: ["Alle"],
     foerderart: "Beratung / Coaching",
-    unternehmensgroesse: ["Kleinstunternehmen", "Kleines Unternehmen", "Mittleres Unternehmen"],
+    unternehmensgroesse: [
+      "Kleinstunternehmen",
+      "Kleines Unternehmen",
+      "Mittleres Unternehmen",
+    ],
     link: "https://www.inqa.de/DE/handeln/inqa-coaching/uebersicht.html",
     isActive: true,
     quelle: "INQA / BMAS",
@@ -159,9 +41,13 @@ export const foerderprogramme: DbFoerderprogramm[] = [
     region: "Bundesweit",
     frist: "laufend",
     foerderbereich: "Digitalisierung",
-    unternehmensbranche: ["Alle"],
     foerderart: "Kredit / Darlehen",
-    unternehmensgroesse: ["Kleinstunternehmen", "Kleines Unternehmen", "Mittleres Unternehmen", "Großes Unternehmen"],
+    unternehmensgroesse: [
+      "Kleinstunternehmen",
+      "Kleines Unternehmen",
+      "Mittleres Unternehmen",
+      "Großes Unternehmen",
+    ],
     link: "https://www.kfw.de/inlandsfoerderung/Unternehmen/Digitalisierung/",
     isActive: true,
     quelle: "KfW",
@@ -172,17 +58,11 @@ export const foerderprogramme: DbFoerderprogramm[] = [
     beschreibung:
       "Ehemaliges Förderprogramm des BMWK für Beratungsleistungen in den Modulen Digitalisierte Geschäftsprozesse, Digitale Markterschließung und IT-Sicherheit. Das Programm ist zum 31.12.2024 ausgelaufen.",
     foerderhoehe: "Bis zu 16.500 € (50 % Zuschuss auf max. 30 Beratertage) — AUSGELAUFEN",
-    zielgruppe: "Unternehmen der gewerblichen Wirtschaft bis 100 Mitarbeiter und max. 20 Mio. € Umsatz",
+    zielgruppe:
+      "Unternehmen der gewerblichen Wirtschaft bis 100 Mitarbeiter und max. 20 Mio. € Umsatz",
     region: "Bundesweit",
     frist: "ended:2024-12-31",
     foerderbereich: "Digitalisierung",
-    unternehmensbranche: [
-      "(CPA C 28) Maschinenbau",
-      "(CPA G 47) Einzelhandel (ohne Handel mit Kfz)",
-      "(CPA I) Gastgewerbe",
-      "(CPA J) Information und Kommunikation",
-      "(CPA M 69-72) Freiberufliche, wissenschaftliche und technische Dienstleistungen",
-    ],
     foerderart: "Beratung / Coaching",
     unternehmensgroesse: ["Kleinstunternehmen", "Kleines Unternehmen"],
     link: "https://www.innovation-beratung-foerderung.de/INNO/Navigation/DE/go-digital/go-digital.html",
@@ -194,14 +74,18 @@ export const foerderprogramme: DbFoerderprogramm[] = [
     name: "Zentrales Innovationsprogramm Mittelstand (ZIM)",
     beschreibung:
       "Das ZIM fördert innovative Projekte von KMU in Deutschland — Einzelprojekte, Kooperationen und Netzwerke.",
-    foerderhoehe: "Bis zu 228.000 € Zuschuss für Einzelprojekte (je nach Region und Größe)",
+    foerderhoehe:
+      "Bis zu 228.000 € Zuschuss für Einzelprojekte (je nach Region und Größe)",
     zielgruppe: "KMU mit bis zu 499 Beschäftigten",
     region: "Bundesweit",
     frist: "laufend",
     foerderbereich: "Digitalisierung",
-    unternehmensbranche: ["Alle"],
     foerderart: "Zuschuss",
-    unternehmensgroesse: ["Kleinstunternehmen", "Kleines Unternehmen", "Mittleres Unternehmen"],
+    unternehmensgroesse: [
+      "Kleinstunternehmen",
+      "Kleines Unternehmen",
+      "Mittleres Unternehmen",
+    ],
     link: "https://www.zim.de/",
     isActive: true,
     quelle: "BMWK / ZIM",
@@ -216,9 +100,12 @@ export const foerderprogramme: DbFoerderprogramm[] = [
     region: "Bundesweit",
     frist: "ended:2023-12-31",
     foerderbereich: "Digitalisierung",
-    unternehmensbranche: ["Alle"],
     foerderart: "Zuschuss",
-    unternehmensgroesse: ["Kleinstunternehmen", "Kleines Unternehmen", "Mittleres Unternehmen"],
+    unternehmensgroesse: [
+      "Kleinstunternehmen",
+      "Kleines Unternehmen",
+      "Mittleres Unternehmen",
+    ],
     link: "https://www.bmwk.de/Redaktion/DE/Dossier/digital-jetzt.html",
     isActive: false,
     quelle: "BMWK",
@@ -233,9 +120,13 @@ export const foerderprogramme: DbFoerderprogramm[] = [
     region: "Bundesweit",
     frist: "laufend",
     foerderbereich: "Energieeffizienz & Erneuerbare Energien",
-    unternehmensbranche: ["Alle"],
     foerderart: "Zuschuss",
-    unternehmensgroesse: ["Kleinstunternehmen", "Kleines Unternehmen", "Mittleres Unternehmen", "Großes Unternehmen"],
+    unternehmensgroesse: [
+      "Kleinstunternehmen",
+      "Kleines Unternehmen",
+      "Mittleres Unternehmen",
+      "Großes Unternehmen",
+    ],
     link: "https://www.bafa.de/DE/Energie/Energieeffizienz/energieeffizienz_node.html",
     isActive: true,
     quelle: "BAFA",
@@ -245,14 +136,18 @@ export const foerderprogramme: DbFoerderprogramm[] = [
     name: "Förderung unternehmerischen Know-hows (BAFA)",
     beschreibung:
       "Zuschuss für professionelle Unternehmensberatung zu wirtschaftlichen, finanziellen, personellen und organisatorischen Fragen.",
-    foerderhoehe: "Bis zu 3.200 € Zuschuss (50–80 % je nach Region und Unternehmensalter)",
+    foerderhoehe:
+      "Bis zu 3.200 € Zuschuss (50–80 % je nach Region und Unternehmensalter)",
     zielgruppe: "Junge Unternehmen (bis 2 Jahre) und Bestandsunternehmen, KMU",
     region: "Bundesweit",
     frist: "laufend",
     foerderbereich: "Digitalisierung",
-    unternehmensbranche: ["Alle"],
     foerderart: "Beratung / Coaching",
-    unternehmensgroesse: ["Kleinstunternehmen", "Kleines Unternehmen", "Mittleres Unternehmen"],
+    unternehmensgroesse: [
+      "Kleinstunternehmen",
+      "Kleines Unternehmen",
+      "Mittleres Unternehmen",
+    ],
     link: "https://www.bafa.de/DE/Wirtschafts_Mittelstandsfoerderung/Beratung_Finanzierung/Unternehmensberatung/unternehmensberatung_node.html",
     isActive: true,
     quelle: "BAFA",
@@ -267,9 +162,13 @@ export const foerderprogramme: DbFoerderprogramm[] = [
     region: "Bundesweit",
     frist: "laufend",
     foerderbereich: "Klimabilanzierung",
-    unternehmensbranche: ["Alle"],
     foerderart: "Kredit / Darlehen",
-    unternehmensgroesse: ["Kleinstunternehmen", "Kleines Unternehmen", "Mittleres Unternehmen", "Großes Unternehmen"],
+    unternehmensgroesse: [
+      "Kleinstunternehmen",
+      "Kleines Unternehmen",
+      "Mittleres Unternehmen",
+      "Großes Unternehmen",
+    ],
     link: "https://www.kfw.de/inlandsfoerderung/Unternehmen/Energie-und-Umwelt/",
     isActive: true,
     quelle: "KfW",
@@ -284,9 +183,12 @@ export const foerderprogramme: DbFoerderprogramm[] = [
     region: "Nordrhein-Westfalen",
     frist: "2026-12-31",
     foerderbereich: "Nachhaltigkeitsberichterstattung",
-    unternehmensbranche: ["Alle"],
     foerderart: "Beratung / Coaching",
-    unternehmensgroesse: ["Kleinstunternehmen", "Kleines Unternehmen", "Mittleres Unternehmen"],
+    unternehmensgroesse: [
+      "Kleinstunternehmen",
+      "Kleines Unternehmen",
+      "Mittleres Unternehmen",
+    ],
     link: "https://www.efre.nrw.de/",
     isActive: true,
     quelle: "EFRE NRW",
@@ -301,9 +203,12 @@ export const foerderprogramme: DbFoerderprogramm[] = [
     region: "Bayern",
     frist: "laufend",
     foerderbereich: "Digitalisierung",
-    unternehmensbranche: ["Alle"],
     foerderart: "Zuschuss",
-    unternehmensgroesse: ["Kleinstunternehmen", "Kleines Unternehmen", "Mittleres Unternehmen"],
+    unternehmensgroesse: [
+      "Kleinstunternehmen",
+      "Kleines Unternehmen",
+      "Mittleres Unternehmen",
+    ],
     link: "https://www.digitalbonus.bayern/",
     isActive: true,
     quelle: "Freistaat Bayern",
@@ -311,14 +216,12 @@ export const foerderprogramme: DbFoerderprogramm[] = [
   {
     id: "db-11",
     name: "ERP-Gründerkredit – Startgeld (KfW 067)",
-    beschreibung:
-      "KfW-Kredit für Existenzgründer und junge Unternehmen (bis 5 Jahre).",
+    beschreibung: "KfW-Kredit für Existenzgründer und junge Unternehmen (bis 5 Jahre).",
     foerderhoehe: "Bis zu 125.000 € Kreditbetrag",
     zielgruppe: "Existenzgründer und junge Unternehmen (bis 5 Jahre)",
     region: "Bundesweit",
     frist: "laufend",
     foerderbereich: "Digitalisierung",
-    unternehmensbranche: ["Alle"],
     foerderart: "Kredit / Darlehen",
     unternehmensgroesse: ["Kleinstunternehmen", "Kleines Unternehmen"],
     link: "https://www.kfw.de/inlandsfoerderung/Unternehmen/Gr%C3%BCnden/",
@@ -335,9 +238,12 @@ export const foerderprogramme: DbFoerderprogramm[] = [
     region: "Bundesweit",
     frist: "laufend",
     foerderbereich: "Energieeffizienz & Erneuerbare Energien",
-    unternehmensbranche: ["Alle"],
     foerderart: "Beratung / Coaching",
-    unternehmensgroesse: ["Kleinstunternehmen", "Kleines Unternehmen", "Mittleres Unternehmen"],
+    unternehmensgroesse: [
+      "Kleinstunternehmen",
+      "Kleines Unternehmen",
+      "Mittleres Unternehmen",
+    ],
     link: "https://www.bafa.de/DE/Energie/Energieberatung/energieberatung_node.html",
     isActive: true,
     quelle: "BAFA",

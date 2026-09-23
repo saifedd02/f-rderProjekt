@@ -32,6 +32,16 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# build info / local agent
-tsconfig.tsbuildinfo
+# editors
+.idea/
+.vscode/
+
+# local agent config
 /.claude/
+
+# lokale Ausgabe von `npm run catalog:demo` / `catalog:preview`
+/digest.html
+/priority-alert.html
+
+# Benchmark runs (contain raw model responses)
+benchmark/results/

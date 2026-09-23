@@ -2,14 +2,14 @@
 
 import React, { useMemo, useState } from "react";
 import {
-  branchen,
   foerderarten,
   foerderbereiche,
   regionen,
   unternehmensgroessen,
   unternehmensgroessenInfo,
-} from "@/data/foerderprogramme";
-import { SearchFilters, defaultFilters } from "@/lib/types";
+} from "@/data/taxonomie";
+import { countActiveFilters } from "@/lib/filters";
+import { defaultFilters, type SearchFilters } from "@/types";
 
 interface FilterPanelProps {
   filters: SearchFilters;
@@ -25,17 +25,7 @@ export default function FilterPanel({
   const [isOpen, setIsOpen] = useState(false);
   const [showSizeInfo, setShowSizeInfo] = useState(false);
 
-  const activeCount = useMemo(
-    () =>
-      [
-        filters.region !== defaultFilters.region,
-        filters.foerderbereich !== defaultFilters.foerderbereich,
-        filters.unternehmensbranche !== defaultFilters.unternehmensbranche,
-        filters.foerderart !== defaultFilters.foerderart,
-        filters.unternehmensgroesse !== defaultFilters.unternehmensgroesse,
-      ].filter(Boolean).length,
-    [filters]
-  );
+  const activeCount = useMemo(() => countActiveFilters(filters), [filters]);
 
   const updateFilter = (key: keyof SearchFilters, value: string) => {
     onFiltersChange({ ...filters, [key]: value });
@@ -89,8 +79,8 @@ export default function FilterPanel({
       {isOpen && (
         <div className="px-5 pb-5 border-t border-gray-100 animate-fade-in">
           <p className="text-xs text-gray-400 mt-4">
-            Diese Filter wirken jetzt als echte Einschränkung auf die Ergebnisse,
-            nicht nur als Freitext.
+            Diese Filter wirken jetzt als echte Einschränkung auf die Ergebnisse, nicht
+            nur als Freitext.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
@@ -115,44 +105,37 @@ export default function FilterPanel({
               options={foerderarten}
               onChange={(value) => updateFilter("foerderart", value)}
             />
-            <FilterSelect
-              label="Unternehmensbranche"
-              value={filters.unternehmensbranche}
-              options={branchen}
-              onChange={(value) => updateFilter("unternehmensbranche", value)}
-            />
-          </div>
-
-          <div className="mt-3">
-            <div className="flex items-center gap-1 mb-1">
-              <label className="block text-xs font-medium text-gray-500">
-                Unternehmensgröße
-              </label>
-              <button
-                type="button"
-                onClick={() => setShowSizeInfo((prev) => !prev)}
-                className="w-3.5 h-3.5 text-[10px] bg-gray-200 text-gray-500 rounded-full hover:bg-blue-100 hover:text-blue-600 flex items-center justify-center transition-colors"
+            <div>
+              <div className="flex items-center gap-1 mb-1">
+                <label className="block text-xs font-medium text-gray-500">
+                  Unternehmensgröße
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowSizeInfo((prev) => !prev)}
+                  className="w-3.5 h-3.5 text-[10px] bg-gray-200 text-gray-500 rounded-full hover:bg-blue-100 hover:text-blue-600 flex items-center justify-center transition-colors"
+                >
+                  ?
+                </button>
+              </div>
+              <select
+                value={filters.unternehmensgroesse}
+                onChange={(event) =>
+                  updateFilter("unternehmensgroesse", event.target.value)
+                }
+                className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors ${
+                  filters.unternehmensgroesse !== defaultFilters.unternehmensgroesse
+                    ? "bg-blue-50 border-blue-200 text-blue-800"
+                    : "bg-gray-50 border-gray-200 text-gray-700"
+                }`}
               >
-                ?
-              </button>
+                {unternehmensgroessen.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
             </div>
-            <select
-              value={filters.unternehmensgroesse}
-              onChange={(event) =>
-                updateFilter("unternehmensgroesse", event.target.value)
-              }
-              className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors ${
-                filters.unternehmensgroesse !== defaultFilters.unternehmensgroesse
-                  ? "bg-blue-50 border-blue-200 text-blue-800"
-                  : "bg-gray-50 border-gray-200 text-gray-700"
-              }`}
-            >
-              {unternehmensgroessen.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
           </div>
 
           {showSizeInfo && (
@@ -218,9 +201,7 @@ function FilterSelect({
 
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-500 mb-1">
-        {label}
-      </label>
+      <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}

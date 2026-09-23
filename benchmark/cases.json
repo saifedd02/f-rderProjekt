@@ -1,0 +1,54 @@
+{
+  "_hinweis": "Gleiche Fälle für alle Anbieter. mustInclude/mustExclude sind Namensmuster (Regex, ohne Groß-/Kleinschreibung). Die Erwartungen sind bewusst sparsam gesetzt und vor dem echten Vergleich fachlich zu ergänzen — K.-o.-Fehler werden unabhängig davon automatisch gemessen.",
+  "cases": [
+    {
+      "id": "digital-nrw-klein",
+      "query": "Digitalisierungsförderung für ein kleines IT-Unternehmen in NRW",
+      "expect": { "mustExclude": ["digital jetzt", "go[- ]?digital"] }
+    },
+    {
+      "id": "digital-bayern-zuschuss",
+      "query": "Zuschuss für Digitalisierung eines Maschinenbau-KMU",
+      "filters": { "region": "Bayern", "foerderart": "Zuschuss" },
+      "expect": { "mustExclude": ["digital jetzt", "go[- ]?digital"] }
+    },
+    {
+      "id": "kredit-bund-gross",
+      "query": "Förderkredit für Digitalisierung und Innovation",
+      "filters": {
+        "region": "Bundesweit",
+        "foerderart": "Kredit / Darlehen",
+        "unternehmensgroesse": "Großes Unternehmen"
+      },
+      "expect": { "mustInclude": ["ERP.*Digitalisierung"] }
+    },
+    {
+      "id": "energie-niedersachsen",
+      "query": "Energieeffizienz und Abwärmenutzung in der Produktion",
+      "filters": {
+        "region": "Niedersachsen",
+        "foerderbereich": "Energieeffizienz & Erneuerbare Energien"
+      }
+    },
+    {
+      "id": "sachsen-anhalt-gruendung",
+      "query": "Gründungsförderung für ein Start-up in Sachsen-Anhalt",
+      "filters": { "region": "Sachsen-Anhalt" }
+    },
+    {
+      "id": "sachsen-beratung",
+      "query": "Beratungsförderung für ein mittleres Unternehmen in Sachsen",
+      "filters": { "region": "Sachsen", "unternehmensgroesse": "Mittleres Unternehmen" }
+    },
+    {
+      "id": "buergschaft-hessen",
+      "query": "Bürgschaft für eine Betriebsmittelfinanzierung",
+      "filters": { "region": "Hessen", "foerderart": "Bürgschaft / Garantie" }
+    },
+    {
+      "id": "nachhaltigkeitsbericht",
+      "query": "Förderung für CSRD-Nachhaltigkeitsberichterstattung",
+      "filters": { "foerderbereich": "Nachhaltigkeitsberichterstattung" }
+    }
+  ]
+}
