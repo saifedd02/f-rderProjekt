@@ -10,6 +10,11 @@ import type { ChatHistoryEntry, SearchFilters } from "@/types";
  * the response. All search logic lives in `server/search`.
  */
 
+// Default serverless timeout (10s) is too short: web search + catalog query +
+// per-program live link verification routinely take longer.
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
 const log = createLogger("API:chat");
 
 interface ChatRequestBody {

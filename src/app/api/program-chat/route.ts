@@ -11,6 +11,10 @@ import type { ChatHistoryEntry, Foerderprogramm } from "@/types";
  * answering from memory.
  */
 
+// Default serverless timeout (10s) is too short for a grounded Gemini call.
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
 const log = createLogger("API:program-chat");
 
 interface ProgramChatRequestBody {
